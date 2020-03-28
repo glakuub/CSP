@@ -1,11 +1,12 @@
-﻿using System;
+﻿using CSP.Games;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace CSP
+namespace CSP.CSP
 {
     class JolkaCSP: CSPBase<string,JolkaVariable>
     {

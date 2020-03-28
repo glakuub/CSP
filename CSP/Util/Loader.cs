@@ -1,9 +1,10 @@
-﻿using System;
+﻿using CSP.Games;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace CSP
+namespace CSP.Util
 {
     class Loader
     {

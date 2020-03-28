@@ -1,8 +1,9 @@
-﻿using System;
+﻿using CSP.Util;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace CSP
+namespace CSP.Games
 {
     class Sudoku
     {

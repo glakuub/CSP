@@ -1,9 +1,10 @@
-﻿using System;
+﻿using CSP.Games;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 
-namespace CSP
+namespace CSP.CSP
 {
     class SudokuCSP:CSPBase<char,Variable<char>>
     {

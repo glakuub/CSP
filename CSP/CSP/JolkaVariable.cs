@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace CSP
+namespace CSP.CSP
 {
     public enum Orientation { HORIZONTAL, VERTICAL}
     class JolkaVariable: Variable<string>

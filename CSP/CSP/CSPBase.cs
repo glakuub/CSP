@@ -5,7 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 
-namespace CSP
+namespace CSP.CSP
 {
     class CSPBase<T,S> where S: Variable<T>
     {

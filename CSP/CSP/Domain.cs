@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace CSP
+namespace CSP.CSP
 {
     class Domain<T>
     {
