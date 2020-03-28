@@ -1,41 +1,77 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading;
 
 namespace CSP
 {
-    class CSPBase<T>
+    class CSPBase<T,S> where S: Variable<T>
     {
-        public Variable<T>[] Variables { set; get; }
-        public Domain<T>[] Domains { set; get; }
-        public List<Constraint<T>>[] Constraints { set; get; }
+
+        public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
+        protected List<S[]> foundSolutions;
         public void BacktrackingAlgorithm()
         {
-            int current = -1;
-            bool finished = false;
+            foundSolutions = new List<S[]>();
+            Variable<T> current = null;
+            bool hasSolution = false;
             bool backtrack = false;
 
             int iteration = 0;
-            while (!finished)
+            int visitedNodes = 0;
+            int visitedNodesToFirst = 0;
+            int foundSolutionsNumber = 0;
+            
+
+            while (true)
             {
-                if (!backtrack)
+                Domain<T> currentVariableDomain = null;
+                if (current != null)
                 {
-                    if (HasNextVariable(current))
-                        current = NextVariable(current);
+                    
+                    if (!backtrack)
+                    {
+                        if (HasNextVariable(current))
+                        {
+                            current = NextVariable(current);
+                        }
+                        else
+                        {
+                            hasSolution = true;
+                            //Console.WriteLine("found");
+                            if (foundSolutionsNumber == 0)
+                                visitedNodesToFirst = visitedNodes;
+                            foundSolutionsNumber++;
+                            foundSolutions.Add(SaveSolution());
+
+                            
+                            if(currentVariableDomain!=null && !currentVariableDomain.HasNext())
+                                current = PreviousVariable(current);
+                        }
+                    }
                     else
-                        break;
+                    {
+                        if (HasPreviousVariable(current))
+                        {
+                            current = PreviousVariable(current);
+                            backtrack = false;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+                    
                 }
                 else
                 {
-                    if (HasPreviousVariable(current))
-                        current = PreviousVariable(current);
-                    else
-                        break;
+                    current = StartVariable();
+                    
                 }
 
-                backtrack = false;
-                var currentVariableDomain = Domains[current];
+                
+                currentVariableDomain = VariablesWithConstraints.Where(t => t.Item1.Index == current.Index).First().Item2;
 
                 bool constraintsSatisfied = false;
                 if (currentVariableDomain.HasNext())
@@ -43,7 +79,8 @@ namespace CSP
                     while (currentVariableDomain.HasNext())
                     {
                         var currentDomainValue = currentVariableDomain.Next();
-                        Variables[current].Value = currentDomainValue;
+                        current.Value = currentDomainValue;
+                        visitedNodes++;
                         if (CheckConstraints(current))
                         {
                             constraintsSatisfied = true;
@@ -53,74 +90,117 @@ namespace CSP
                     if (!constraintsSatisfied)
                     {
                         currentVariableDomain.Reset();
-                        Variables[current].Value = currentVariableDomain.UnsetValue();
+                        current.Value = currentVariableDomain.UnsetValue();
                         backtrack = true;
                     }
                 }
                 else
                 {
                     currentVariableDomain.Reset();
-                    Variables[current].Value = currentVariableDomain.UnsetValue();
+                    current.Value = currentVariableDomain.UnsetValue();
                     backtrack = true;
                 }
 
-
-                Console.WriteLine($"iteration: {iteration}");
+                
                 iteration++;
             }
-           
+
+            Console.WriteLine($"visited nodes to first solution: {visitedNodesToFirst}");
+            Console.WriteLine($"all visited nodes: {visitedNodes}");
+            Console.WriteLine($"found solution: {hasSolution}");
+            Console.WriteLine($"solutions number: {foundSolutionsNumber}");
+
+            
 
         }
 
-        private bool CheckConstraints(int current)
+        private S[] SaveSolution()
+        {
+            var saved = new S[VariablesWithConstraints.Length];
+            for(int i = 0; i<saved.Length;i++)
+            {
+                saved[i] = (S)Activator.CreateInstance(typeof(S),new object[] { VariablesWithConstraints[i].Item1 });
+            }
+
+            return saved;
+        }
+        private Variable<T> GoToLastWithNonemptyDomain(Variable<T> current)
+        {
+            var curr = current;
+            while(HasPreviousVariable(curr))
+            {
+                var prev = PreviousVariable(current);
+                var prevDomain = VariablesWithConstraints.Where(t => t.Item1.Index == prev.Index).First().Item2;
+                if(prevDomain.RemainingSize()==0)
+                {
+                    break;
+                }
+                else
+                {
+                    curr = prev;
+                }
+            }
+            return curr;
+        }
+
+        private Variable<T> StartVariable()
+        {
+            return VariablesWithConstraints[0].Item1;
+        }
+        private bool CheckConstraints(Variable<T> current)
         {
             bool result = true;
-            if (current < Constraints.Length && Constraints[current] != null)
-            {
-                foreach (var pred in Constraints[current])
+            int index = current.Index;
+            var constraints = VariablesWithConstraints.Where(t => t.Item1.Index == index).First().Item3;
+                foreach (var pred in constraints)
                 {
-                    if (!pred.Check(Variables))
+                    if (!pred.Check(VariablesWithConstraints))
                     {
                         result = false;
                         break;
                     }
                 }
-            }
+            
             return result;
         }
-        private bool HasPreviousVariable(int current)
+        private bool HasPreviousVariable(Variable<T> current)
         {
-            var prev = current - 1;
+            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            return currentIdx - 1 >= 0;
+        }
+        private Variable<T> PreviousVariable(Variable<T> current)
+        {
+            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            return VariablesWithConstraints[currentIdx - 1].Item1;
+        }
+        private bool HasNextVariable(Variable<T> current)
+        {
+            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            return currentIdx + 1 <VariablesWithConstraints.Length;
+        }
+        private Variable<T> NextVariable(Variable<T> current)
+        {
+            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            return VariablesWithConstraints[currentIdx + 1].Item1;
+        }
 
-            return prev >= 0;
-        }
-        private int PreviousVariable(int current)
-        {
-            var next = current - 1;
+        //protected int[] SortConstraintwise()
+        //{
+        //    //var indexes = Enumerable.Range(0, Variables.Length).ToArray();     
+        //    //var counts = Constraints.Select(l => l.Count).ToArray();
+        //    //Array.Sort(counts, indexes);
 
-            return next;
-        }
-        private bool HasNextVariable(int current)
+        //    return indexes.Reverse().ToArray();
+
+
+        //}
+
+        protected void SortDomainwise()
         {
-            int next;
-            if (current == -1)
-                next = 0;
-            else
-            {
-                next = current + 1;
-            }
-            return next < Variables.Length;
+
+            Array.Sort(VariablesWithConstraints, (t1,t2) => t1.Item2.Size.CompareTo(t2.Item2.Size));
+
         }
-        private int NextVariable(int current)
-        {
-            int next;
-            if (current == -1)
-                next = 0;
-            else
-            {
-                next = current + 1;
-            }
-            return next;
-        }
+
     }
 }

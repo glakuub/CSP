@@ -8,6 +8,7 @@ namespace CSP
     {
         public int Id { set; get; }
         public double Difficulty { set; get; }
+        public char Empty { set; get; }
         public Matrix<int> Board { set; get; }
         public Matrix<int> Soulution { set; get; }
 

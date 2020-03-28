@@ -11,11 +11,16 @@ namespace CSP
         private int _currentIndex;
         public T Default { set; get; } 
 
+        public int Size { get { return _domain.Length; } }
+
         public Domain(T[] domain)
         {
             _domain = domain;
         }
-
+        public int RemainingSize()
+        {
+            return Size - _currentIndex;
+        }
         public T First()
         {
             return _domain[0];

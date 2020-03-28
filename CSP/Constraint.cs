@@ -1,31 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace CSP
 {
-    class Constraint<T>
+    class Constraint<T,S> where S:Variable<T>
     {
         private Func<T, T, bool> _predicate;
-        private int _arg1;
-        private int _arg2;
+        private int _id1;
+        private int _id2;
         
-        public Constraint(int arg1, int arg2, Func<T, T, bool> predicate)
+        public Constraint(int id1, int id2, Func<T, T, bool> predicate)
         {
           
-            _arg1 = arg1;
-            _arg2 = arg2;
+            _id1 = id1;
+            _id2 = id2;
             _predicate = predicate;
         }
-        //public bool Check(Variable<T>[,] variables)
-        //{
-        //    return _predicate.Invoke(variables[_arg1.Item1, _arg1.Item2].Value, variables[_arg2.Item1, _arg2.Item2].Value);
-        //}
-        public bool Check(Variable<T>[] variables)
+
+        public bool Check(Tuple<S,Domain<T>,List<Constraint<T,S>>>[] varsWithCons)
         {
-            var v1 = variables[_arg1];
-            var v2 = variables[_arg2];
-            return _predicate.Invoke(variables[_arg1].Value, variables[_arg2].Value);
+            var v1 = varsWithCons.Where(t => t.Item1.Index == _id1).First().Item1.Value;
+            var v2 = varsWithCons.Where(t => t.Item1.Index == _id2).First().Item1.Value;
+            
+
+            return _predicate(v1,v2);
         }
     }
 }

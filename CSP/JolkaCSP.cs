@@ -7,41 +7,56 @@ using System.Threading;
 
 namespace CSP
 {
-    class JolkaCSP: CSPBase<string>
+    class JolkaCSP: CSPBase<string,JolkaVariable>
     {
-        private Jolka jolka;
-        
+        private Jolka _jolka;
+        private char EMPTY_CHAR;
         public JolkaCSP(Jolka jolka)
         {
-            this.jolka = jolka;
-            Variables = ParseVariables(jolka).ToArray();
-            //foreach(var v in Variables)
-            //{
-            //    Console.WriteLine(v);
-            //}
-            Domains = CreateDmains(jolka, Variables.Length);
-            Constraints = CreateConstraints(jolka, Variables);
-            //Constraints = new List<Constraint<string>>[0]; //CreateConstraints(jolka, Variables);
-            
+            _jolka = jolka;
+            EMPTY_CHAR = jolka.Empty;
+
+            var variables = ParseVariables(jolka).ToArray();
+            var domains = CreateDmains(jolka, variables);
+            var constraints = CreateConstraints(jolka, variables);
+
+            VariablesWithConstraints = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>[variables.Length];
+            for(int i=0; i< variables.Length;i++)
+            {
+                VariablesWithConstraints[i] = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>(variables[i], domains[i], constraints[i]);
+            }
+
+            SortDomainwise();
+
         }
 
-
-        public void PrintOnBoard()
+        public new void BacktrackingAlgorithm()
         {
-            var board = jolka.Board;
-            foreach(var v in Variables)
+            base.BacktrackingAlgorithm();
+            foreach(var s in foundSolutions)
+            {
+                PrintOnBoard(s);
+            }
+
+                
+        }
+
+        public void PrintOnBoard(JolkaVariable[] solutions)
+        {
+            var board = _jolka.Board;
+            foreach(var v in solutions)
             {
                 var local = (v as JolkaVariable);
-                 if(local.orientation.Equals(Orientation.HORIZONTAL))
+                 if(local.Orientation.Equals(Orientation.HORIZONTAL))
                      {
-                            for(int i=0;i<v.Value.Length;i++)
+                            for(int i=0;i<local.Value.Length;i++)
                             {
                                 board.SetAt(local.Start.Item1, local.Start.Item2 + i,local.Value[i]);
                             }
                      }
                  else
                  {
-                    for (int i = 0; i < v.Value.Length; i++)
+                    for (int i = 0; i < local.Value.Length; i++)
                     {
                         board.SetAt(local.Start.Item1 + i, local.Start.Item2, local.Value[i]);
                     }
@@ -50,25 +65,21 @@ namespace CSP
             Console.WriteLine(board.ToString());
         }
 
-        public void BacktrackingAlgorithm()
+    
+        private Domain<string>[] CreateDmains(Jolka jolka, JolkaVariable[] variables)
         {
-            base.BacktrackingAlgorithm();
-            
-        }
-
-        private Domain<string>[] CreateDmains(Jolka jolka, int variablesCount)
-        {
-            var result = new Domain<string>[variablesCount];
-            for(int i = 0; i<variablesCount;i++)
+            var result = new Domain<string>[variables.Length];
+            for(int i = 0; i<result.Length;i++)
             {
-                var validWords = jolka.Words.Where(w=>w.Length==Variables[i].Value.Length);
-                result[i] = new Domain<string>(validWords.ToArray()) { Default = new string('_',Variables[i].Value.Length) };
+                var validWords = jolka.Words.Where(w=>w.Length==variables[i].Value.Length);
+                result[i] = new Domain<string>(validWords.ToArray()) { Default = new string(EMPTY_CHAR, variables[i].Value.Length) };
             }
 
             return result;
         }
         private List<JolkaVariable> ParseVariables(Jolka jolka)
         {
+            int varIndex = 0;
             var board = jolka.Board;
             var vars = new List<JolkaVariable>();
             for (int row = 0; row < board.Rows; row++)
@@ -94,12 +105,14 @@ namespace CSP
                         {
                             vars.Add(new JolkaVariable()
                             {
+                                Index = varIndex,
                                 Value = new string(jolka.Empty, wordLength),
                                 Start = new Tuple<int, int>(row, wordStart),
-                                orientation = Orientation.HORIZONTAL
-                            });
+                                Orientation = Orientation.HORIZONTAL
+                            }) ;
                             wordLength = 0;
                             wordStart = column + 1;
+                            varIndex++;
                         }
                     }
                     else
@@ -110,11 +123,16 @@ namespace CSP
                     
                 }
                 if (wordLength > 1)
-                    vars.Add(new JolkaVariable() { Value = new string(jolka.Empty, wordLength),
+                {
+                    vars.Add(new JolkaVariable()
+                    {
+                        Index = varIndex,
+                        Value = new string(jolka.Empty, wordLength),
                         Start = new Tuple<int, int>(row, wordStart),
-                        orientation = Orientation.HORIZONTAL
-                    });
-
+                        Orientation = Orientation.HORIZONTAL
+                    }) ;
+                    varIndex++;
+                }
             }
             for (int column = 0; column < board.Columns; column++)
             {
@@ -139,11 +157,12 @@ namespace CSP
                         {
                             vars.Add(new JolkaVariable()
                             {
+                                Index = varIndex,
                                 Value = new string(jolka.Empty, wordLength),
                                 Start = new Tuple<int, int>(wordStart, column),
-                                orientation = Orientation.VERTICAL
-                            });
-
+                                Orientation = Orientation.VERTICAL
+                            }) ;
+                            varIndex++;
                             wordLength = 0;
                             wordStart = row + 1;
                         }
@@ -159,20 +178,27 @@ namespace CSP
                   
                 }
                 if (wordLength > 1)
-                    vars.Add(new JolkaVariable() { Value = new string(jolka.Empty, wordLength), 
-                        Start = new Tuple<int, int>(wordStart, column), 
-                        orientation = Orientation.VERTICAL });
-            }
+                {
+                    vars.Add(new JolkaVariable()
+                    {
+                        Index = varIndex,
+                        Value = new string(jolka.Empty, wordLength),
+                        Start = new Tuple<int, int>(wordStart, column),
+                        Orientation = Orientation.VERTICAL
+                    });
+                    varIndex++;
+                }
+                }
             return vars;
         }
 
-        private List<Constraint<string>>[] CreateConstraints(Jolka jolka, Variable<string>[] variables)
+        private List<Constraint<string,JolkaVariable>>[] CreateConstraints(Jolka jolka, Variable<string>[] variables)
         {
-            var constraints = new List<Constraint<string>>[variables.Length];
+            var constraints = new List<Constraint<string,JolkaVariable>>[variables.Length];
 
             for(int i = 0; i< variables.Length;i++)
             {
-                constraints[i] = new List<Constraint<string>>();
+                constraints[i] = new List<Constraint<string, JolkaVariable>>();
                 for(int j = 0; j< variables.Length;j++)
                 {
                     if(i!=j)
@@ -191,9 +217,9 @@ namespace CSP
             return constraints;
         }
 
-        private Constraint<string> ConstraintOfIntersection(Variable<string>[] variables, int v1idx, int v2idx)
+        private Constraint<string, JolkaVariable> ConstraintOfIntersection(Variable<string>[] variables, int v1idx, int v2idx)
         {
-            Constraint<string> constraint = null;
+            Constraint<string, JolkaVariable> constraint = null;
             
             var v1 = variables[v1idx] as JolkaVariable;
             var v1fields = VariableFields(v1);
@@ -207,8 +233,8 @@ namespace CSP
             {
                 int var1intPosition = v1fields.IndexOf(intersection[0]);
                 int var2intPosition = v2fields.IndexOf(intersection[0]);
-                constraint = new Constraint<string>(v1idx, v2idx, (s1, s2) => (s1[var1intPosition].Equals(s2[var2intPosition]) 
-                                                                            || s2[var2intPosition].Equals('_')));
+                constraint = new Constraint<string, JolkaVariable>(v1idx, v2idx, (s1, s2) => (s1[var1intPosition].Equals(s2[var2intPosition]) 
+                                                                            || s2[var2intPosition].Equals(EMPTY_CHAR)));
             }
 
             return constraint;
@@ -217,7 +243,7 @@ namespace CSP
         private List<Tuple<int,int>> VariableFields(JolkaVariable variable)
         {
             var fields = new List<Tuple<int, int>>();
-            if (variable.orientation.Equals(Orientation.HORIZONTAL))
+            if (variable.Orientation.Equals(Orientation.HORIZONTAL))
             {
                 for (int i = variable.Start.Item2; i < variable.Start.Item2 + variable.Value.Length; i++)
                 {

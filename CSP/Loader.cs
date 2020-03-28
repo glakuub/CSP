@@ -9,7 +9,7 @@ namespace CSP
     {
         private const string SEPARATOR = ";";
         private const char EMPTY = '.';
-        public static List<Sudoku> LoadSudokuBoards(string fileName, string separator = SEPARATOR)
+        public static List<Sudoku> LoadSudokuBoards(string fileName, char empty, string separator = SEPARATOR)
         {
             var boards = new List<Sudoku>();
             using(var sr = new StreamReader(fileName))
@@ -25,6 +25,7 @@ namespace CSP
                         board.Difficulty = double.Parse(columns[1]);
                         board.Board = ParseSudokuBoard(columns[2]);
                         board.Soulution = ParseSudokuBoard(columns[3]);
+                        board.Empty = empty;
                         boards.Add(board);
                     }
                 }

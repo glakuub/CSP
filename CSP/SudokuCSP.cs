@@ -1,173 +1,153 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 namespace CSP
 {
-    class SudokuCSP:CSPBase<int>
+    class SudokuCSP:CSPBase<char,Variable<char>>
     {
-        Sudoku Sudoku {set;get;}
+        //Sudoku Sudoku {set;get;}
         private int _rows;
         private int _columns;
-
-       
-
-        //Variable<int>[,] Variables;
-        //public Domain<int>[,] Domains { set; get; }
-        //public List<Constraint<int>>[,] Constraints { set; get; }
+        private char EMPTY;
 
         public SudokuCSP(Sudoku board)
         {
             _rows = board.Board.Rows;
             _columns = board.Board.Columns;
-            Sudoku = board;
-            Variables = new Variable<int>[_rows * _columns];
-            for(int row = 0; row < _rows;row++)
+            //Sudoku = board;
+            EMPTY = board.Empty;
+            var vars = ParseVariables(board);
+            var doms = CreateDomains(vars);
+            var cons = CreateConstraints(_rows, _columns);
+
+            VariablesWithConstraints = new Tuple<Variable<char>, Domain<char>, List<Constraint<char, Variable<char>>>>[vars.Length];
+            for(int i = 0; i<vars.Length;i++)
             {
-                for(int column = 0; column < _columns; column++)
-                {
-                    Variables[row * _columns +  column] = new Variable<int>() { Value = Sudoku.Board.GetAt(row, column) };
-                }
+                VariablesWithConstraints[i] = new Tuple<Variable<char>, Domain<char>, List<Constraint<char, Variable<char>>>>(vars[i], doms[i], cons[i]);
             }
-            Constraints = new List<Constraint<int>>[_rows * _columns];
+
+        }
+        public new void BacktrackingAlgorithm()
+        {
+            base.BacktrackingAlgorithm();
+            foreach(var v in foundSolutions)
+            {
+                PrintOnBoard(v);
+                Console.WriteLine();
+                Console.WriteLine();
+                Console.WriteLine();
+            }
+            //PrintOnBoard();
         }
 
-        //public void BacktrackingAlgorithm()
-        //{
-        //    Tuple<int,int> current = null;
-        //    bool finished = false;
-        //    bool backtrack = false;
+        private void PrintOnBoard(Variable<char>[] variables)
+        {
+            for (int row = 0; row < _rows; row++)
+            {
+                for (int column = 0; column < _columns; column++)
+                {
+                    Console.Write($"{variables[row * _columns + column].Value} ");
+                }
+                Console.WriteLine();
+            }
 
-        //    while (!finished)
-        //    {
-        //        if (!backtrack)
-        //        {
-        //            if (HasNextVariable(current))
-        //                current = NextVariable(current);
-        //            else
-        //                break;
-        //        }
-        //        else
-        //        {
-        //            if (HasPreviousVariable(current))
-        //                current = PreviousVariable(current);
-        //            else
-        //                break;
-        //        }
+        }
+        private Variable<char>[] ParseVariables(Sudoku sudoku)
+        {
+            var variables = new Variable<char>[sudoku.Board.Rows * sudoku.Board.Columns];
+            for(int row = 0; row < sudoku.Board.Rows; row++)
+            {
+                for(int column = 0; column < sudoku.Board.Columns;column++)
+                {
+                    var varIndex = row * sudoku.Board.Columns + column;
+                    if (sudoku.Board.GetAt(row, column) == 0)
+                    {
+                        variables[varIndex] = new Variable<char>() { Index = varIndex, Value = EMPTY };
+                    }
+                    else
+                    {
+                        variables[varIndex] = new Variable<char>() { Index = varIndex, Value = (char)(sudoku.Board.GetAt(row,column) + 48) };
+                    }
 
-        //        backtrack = false;
-        //        var currentVariableDomain = Domains[current.Item1, current.Item2];
+                }
+            }
 
-        //        bool constraintsSatisfied = false;
-        //        if (currentVariableDomain.HasNext())
-        //        {
-        //            while (currentVariableDomain.HasNext())
-        //            {
-        //                var currentDomainValue = currentVariableDomain.Next();
-        //                Variables[current.Item1, current.Item2].Value = currentDomainValue;
-        //                if (CheckConstraints(current))
-        //                {
-        //                    constraintsSatisfied = true;
-        //                    break;
-        //                }
-        //            }
-        //            if (!constraintsSatisfied)
-        //            {
-        //                currentVariableDomain.Reset();
-        //                Variables[current.Item1, current.Item2].Value = currentVariableDomain.Default();
-        //                backtrack = true;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            currentVariableDomain.Reset();
-        //            Variables[current.Item1, current.Item2].Value = currentVariableDomain.Default();
-        //            backtrack = true;
-        //        }
-        //        //Console.Clear();
-        //        //for (int i = 0; i < _rows; i++)
-        //        //{
-        //        //    for (int j = 0; j < _columns; j++)
-        //        //    {
-        //        //        Console.Write($"{Variables[i, j]} ");
-        //        //    }
-        //        //    Console.WriteLine();
-        //        //}
-        //        //Thread.Sleep(10);
+            return variables;
+        }
+        private Domain<char>[] CreateDomains(Variable<char>[] variables)
+        {
+            var domains = new Domain<char>[variables.Length];
+            for(int i = 0; i< domains.Length;i++)
+            {
+                if(variables[i].Value == EMPTY)
+                {
+                    domains[i] = new Domain<char>("123456789".ToCharArray()) { Default = EMPTY };
+                }
+                else
+                {
+                    domains[i] = new Domain<char>(new char[1] { variables[i].Value }) { Default = variables[i].Value };
+                }
+            }
 
+            return domains;
+        }
 
-        //    }
-        //    Console.Clear();
-        //    for (int i = 0; i < _rows; i++)
-        //    {
-        //        for (int j = 0; j < _columns; j++)
-        //        {
-        //            Console.Write($"{Variables[i, j]} ");
-        //        }
-        //        Console.WriteLine();
-        //    }
-        //    Thread.Sleep(500);
+        public List<Constraint<char,Variable<char>>>[] CreateConstraints(int rows, int columns)
+        {
+            var constraints = new List<Constraint<char, Variable<char>>>[rows * columns];
+            for(int row =0; row<rows;row++)
+            {
+                for(int column = 0; column < columns; column++)
+                {
+                    constraints[row * columns + column] = GenerateSudokuConstraints(row, column, rows, columns);
+                }
+            }
+
+            return constraints;
+        }
+            
 
 
 
-        //}
-        //private bool CheckConstraints(Tuple<int, int> current)
-        //{
-        //    bool result = true;
-        //    if (Constraints[current.Item1, current.Item2] != null)
-        //    {
-        //        foreach (var pred in Constraints[current.Item1, current.Item2])
-        //        {
-        //            if (!pred.Check(Variables))
-        //            {
-        //                result = false;
-        //                break;
-        //            }
-        //        }
-        //    }
-        //    return result;
-        //}
 
-        //private bool HasPreviousVariable(Tuple<int, int> current)
-        //{
-        //    var next = new Tuple<int, int>((current.Item1 * _columns + current.Item2 -1) / _rows,
-        //                                  (current.Item1 * _columns + current.Item2 - 1) % _rows);
-
-        //    return next.Item1 >= 0 && next.Item2 >= 0;
-        //}
-        //private Tuple<int, int> PreviousVariable(Tuple<int, int> current)
-        //{
-        //    var next = new Tuple<int, int>((current.Item1 * _columns + current.Item2 - 1) / _rows,
-        //                                  (current.Item1 * _columns + current.Item2 - 1) % _rows);
-
-        //    return next;
-        //}
-        //private bool HasNextVariable(Tuple<int,int> current)
-        //{
-        //    Tuple<int, int> next;
-        //    if (current == null)
-        //        next = new Tuple<int, int>(0, 0);
-        //    else
-        //    {
-        //        next = new Tuple<int, int>((current.Item1 * _columns + current.Item2 + 1) / _rows,
-        //                                      (current.Item1 * _columns + current.Item2 + 1) % _rows);
-        //    }
-        //    return next.Item1 < _rows && next.Item2 < _columns;
-        //}
-        //private Tuple<int,int> NextVariable(Tuple<int,int> current)
-        //{
-        //    Tuple<int, int> next;
-        //    if (current == null)
-        //        next = new Tuple<int, int>(0, 0);
-        //    else
-        //    {
-        //        next = new Tuple<int, int>((current.Item1 * _columns + current.Item2 + 1) / _rows,
-        //                                  (current.Item1 * _columns + current.Item2 + 1) % _rows);
-        //    }
-        //    return next;
-        //}
-
-      
-
+        public static List<Constraint<char, Variable<char>>> GenerateSudokuConstraints(int row, int column, int maxRow, int maxColumn)
+        {
+            var result = new List<Constraint<char, Variable<char>>>();
+            for (int i = 0; i < maxRow; i++)
+            {
+                if (i != row)
+                {
+                    result.Add(new Constraint<char, Variable<char>>(row * maxRow + column, i * maxRow + column, (f1, f2) => f1 != f2));
+                }
+            }
+            for (int i = 0; i < maxRow; i++)
+            {
+                if (i != column)
+                {
+                    result.Add(new Constraint<char, Variable<char>>(row * maxRow + column, row * maxRow + i, (f1, f2) => f1 != f2));
+                }
+            }
+            List<Tuple<int, int>> neighbours = new List<Tuple<int, int>>();
+            var ralativeRow = row % 3;
+            var relativeColumn = column % 3;
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    if (!(i == ralativeRow && j == relativeColumn))
+                    {
+                        neighbours.Add(new Tuple<int, int>(i, j));
+                    }
+                }
+            }
+            neighbours = neighbours.Select(t => new Tuple<int, int>(t.Item1 + ((int)row / 3) * 3, t.Item2 + ((int)column / 3) * 3)).ToList();
+            foreach (var n in neighbours)
+            {
+                result.Add(new Constraint<char, Variable<char>>(row * maxRow + column, n.Item1 * maxRow + n.Item2, (f1, f2) => f1 != f2));
+            }
+            return result;
+        }
     }
 }
