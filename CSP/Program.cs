@@ -19,15 +19,15 @@ namespace CSP
         {
 
 
-            //var sbs = Loader.LoadSudokuBoards(FILE_PATH,'_');
-            //foreach (var s in sbs.TakeLast(6).Take(3))
-            //{
-            //    var scsp = new SudokuCSP(s);
-            //    scsp.BacktrackingAlgorithm();
-            //}
-            var jolka = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle1", $@"{JOLKA_DIRECTORY}\words1", '#', '_');
-            var jolkaCSP = new JolkaCSP(jolka);
-            jolkaCSP.BacktrackingAlgorithm();
+            var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
+            foreach (var s in sbs.TakeLast(6).Take(3))
+            {
+                var scsp = new SudokuCSP(s);
+                scsp.BacktrackingAlgorithm();
+            }
+            //var jolka = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle1", $@"{JOLKA_DIRECTORY}\words1", '#', '_');
+            //var jolkaCSP = new JolkaCSP(jolka);
+            //jolkaCSP.BacktrackingAlgorithm();
 
         }
 

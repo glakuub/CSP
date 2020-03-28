@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading;
@@ -13,6 +14,8 @@ namespace CSP
         protected List<S[]> foundSolutions;
         public void BacktrackingAlgorithm()
         {
+            var timeToFirst = new Stopwatch();
+            var timeToComplete = new Stopwatch();
             foundSolutions = new List<S[]>();
             Variable<T> current = null;
             bool hasSolution = false;
@@ -22,8 +25,10 @@ namespace CSP
             int visitedNodes = 0;
             int visitedNodesToFirst = 0;
             int foundSolutionsNumber = 0;
-            
 
+
+            timeToFirst.Start();
+            timeToComplete.Start();
             while (true)
             {
                 Domain<T> currentVariableDomain = null;
@@ -41,7 +46,10 @@ namespace CSP
                             hasSolution = true;
                             //Console.WriteLine("found");
                             if (foundSolutionsNumber == 0)
+                            {
                                 visitedNodesToFirst = visitedNodes;
+                                timeToFirst.Stop();
+                            }
                             foundSolutionsNumber++;
                             foundSolutions.Add(SaveSolution());
 
@@ -105,10 +113,14 @@ namespace CSP
                 iteration++;
             }
 
-            Console.WriteLine($"visited nodes to first solution: {visitedNodesToFirst}");
+            timeToComplete.Stop();
+
+            Console.WriteLine($"\nvisited nodes to first solution: {visitedNodesToFirst}");
             Console.WriteLine($"all visited nodes: {visitedNodes}");
             Console.WriteLine($"found solution: {hasSolution}");
             Console.WriteLine($"solutions number: {foundSolutionsNumber}");
+            Console.WriteLine($"time to first solution: {timeToFirst.Elapsed}");
+            Console.WriteLine($"time to complete: {timeToComplete.Elapsed}\n");
 
             
 
@@ -199,6 +211,14 @@ namespace CSP
         {
 
             Array.Sort(VariablesWithConstraints, (t1,t2) => t1.Item2.Size.CompareTo(t2.Item2.Size));
+
+        }
+        protected void SortDomainwiseAndConstrainwise()
+        {
+
+            Array.Sort(VariablesWithConstraints, (t1, t2) => t1.Item2.Size.CompareTo(t2.Item2.Size)==0?
+                                                            t2.Item3.Count.CompareTo(t1.Item3.Count):
+                                                            t1.Item2.Size.CompareTo(t2.Item2.Size));
 
         }
 

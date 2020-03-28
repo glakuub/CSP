@@ -27,6 +27,7 @@ namespace CSP
             }
 
             SortDomainwise();
+            //SortDomainwiseAndConstrainwise();
 
         }
 

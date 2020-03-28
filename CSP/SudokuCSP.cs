@@ -29,17 +29,20 @@ namespace CSP
             }
 
         }
-        public new void BacktrackingAlgorithm()
+        public new void BacktrackingAlgorithm(bool printSolutions = false)
         {
             base.BacktrackingAlgorithm();
-            foreach(var v in foundSolutions)
+            if (printSolutions)
             {
-                PrintOnBoard(v);
-                Console.WriteLine();
-                Console.WriteLine();
-                Console.WriteLine();
+                foreach (var v in foundSolutions)
+                {
+                    PrintOnBoard(v);
+                    Console.WriteLine();
+                    Console.WriteLine();
+                    Console.WriteLine();
+                }
             }
-            //PrintOnBoard();
+            
         }
 
         private void PrintOnBoard(Variable<char>[] variables)
