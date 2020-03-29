@@ -1,4 +1,5 @@
 ﻿using CSP.Games;
+using CSP.Util;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -32,42 +33,59 @@ namespace CSP.CSP
 
         }
 
-        public new void BacktrackingAlgorithm()
+        public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
             base.BacktrackingAlgorithm();
-            foreach(var s in foundSolutions)
+            if (printSolutions)
             {
-                PrintOnBoard(s);
+                foreach (var s in _foundSolutions)
+                {
+                    PrintOnBoard(s);
+                }
             }
-
+            var fileName = $"{_jolka.Name}_solution";
+            if (FileSaveDirectory != null)
+                fileName = $@"{FileSaveDirectory}\{fileName}";
+            base.SaveSolutionsInfoToFile(fileName);
+            foreach(var s in _foundSolutions)
+            {
+                SaveBoardToFile(fileName, s);
+            }
                 
         }
 
-        public void PrintOnBoard(JolkaVariable[] solutions)
+        private string CreateBoardString(JolkaVariable[] variables)
         {
             var board = _jolka.Board;
-            foreach(var v in solutions)
+            foreach (var v in variables)
             {
                 var local = (v as JolkaVariable);
-                 if(local.Orientation.Equals(Orientation.HORIZONTAL))
-                     {
-                            for(int i=0;i<local.Value.Length;i++)
-                            {
-                                board.SetAt(local.Start.Item1, local.Start.Item2 + i,local.Value[i]);
-                            }
-                     }
-                 else
-                 {
+                if (local.Orientation.Equals(Orientation.HORIZONTAL))
+                {
+                    for (int i = 0; i < local.Value.Length; i++)
+                    {
+                        board.SetAt(local.Start.Item1, local.Start.Item2 + i, local.Value[i]);
+                    }
+                }
+                else
+                {
                     for (int i = 0; i < local.Value.Length; i++)
                     {
                         board.SetAt(local.Start.Item1 + i, local.Start.Item2, local.Value[i]);
                     }
                 }
             }
-            Console.WriteLine(board.ToString());
+            return board.ToString();
         }
-
-    
+        public void PrintOnBoard(JolkaVariable[] variables)
+        { 
+            Console.WriteLine(CreateBoardString(variables));
+        }
+        private void SaveBoardToFile(string fileName, JolkaVariable[] variables)
+        {
+            var logger = new Logger(fileName);
+            logger.WriteLine(CreateBoardString(variables));
+        }
         private Domain<string>[] CreateDmains(Jolka jolka, JolkaVariable[] variables)
         {
             var result = new Domain<string>[variables.Length];

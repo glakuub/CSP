@@ -45,9 +45,11 @@ namespace CSP.Util
                 if (File.Exists(wordsFileName))
                 {
                     var words = File.ReadAllLines(wordsFileName);
+                    var fileName = Path.GetFileName(boarFileName);
 
                     result = new Jolka()
                     {
+                        Name = fileName,
                         Board = matrix,
                         Words = words,
                         Block = block,

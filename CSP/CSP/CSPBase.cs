@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CSP.Util;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -11,24 +12,27 @@ namespace CSP.CSP
     {
 
         public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
-        protected List<S[]> foundSolutions;
-        public void BacktrackingAlgorithm()
+        public string FileSaveDirectory { set; get; }
+
+        protected List<S[]> _foundSolutions;
+        
+        private Stopwatch _timeToFirst;
+        private Stopwatch _timeToComplete;
+        private int _iteration = 0;
+        private int _visitedNodes = 0;
+        private int _visitedNodesToFirst = 0;
+        private int _foundSolutionsNumber = 0;
+        private bool _hasSolution = false;
+        public virtual void BacktrackingAlgorithm(bool printSolutions = false)
         {
-            var timeToFirst = new Stopwatch();
-            var timeToComplete = new Stopwatch();
-            foundSolutions = new List<S[]>();
+            _timeToFirst = new Stopwatch();
+            _timeToComplete = new Stopwatch();
+            _foundSolutions = new List<S[]>();
             Variable<T> current = null;
-            bool hasSolution = false;
             bool backtrack = false;
 
-            int iteration = 0;
-            int visitedNodes = 0;
-            int visitedNodesToFirst = 0;
-            int foundSolutionsNumber = 0;
-
-
-            timeToFirst.Start();
-            timeToComplete.Start();
+            _timeToFirst.Start();
+            _timeToComplete.Start();
             while (true)
             {
                 Domain<T> currentVariableDomain = null;
@@ -43,15 +47,15 @@ namespace CSP.CSP
                         }
                         else
                         {
-                            hasSolution = true;
+                            _hasSolution = true;
                             //Console.WriteLine("found");
-                            if (foundSolutionsNumber == 0)
+                            if (_foundSolutionsNumber == 0)
                             {
-                                visitedNodesToFirst = visitedNodes;
-                                timeToFirst.Stop();
+                                _visitedNodesToFirst = _visitedNodes;
+                                _timeToFirst.Stop();
                             }
-                            foundSolutionsNumber++;
-                            foundSolutions.Add(SaveSolution());
+                            _foundSolutionsNumber++;
+                            _foundSolutions.Add(SaveSolution());
 
                             
                             if(currentVariableDomain!=null && !currentVariableDomain.HasNext())
@@ -88,7 +92,7 @@ namespace CSP.CSP
                     {
                         var currentDomainValue = currentVariableDomain.Next();
                         current.Value = currentDomainValue;
-                        visitedNodes++;
+                        _visitedNodes++;
                         if (CheckConstraints(current))
                         {
                             constraintsSatisfied = true;
@@ -110,22 +114,40 @@ namespace CSP.CSP
                 }
 
                 
-                iteration++;
+                _iteration++;
             }
 
-            timeToComplete.Stop();
-
-            Console.WriteLine($"\nvisited nodes to first solution: {visitedNodesToFirst}");
-            Console.WriteLine($"all visited nodes: {visitedNodes}");
-            Console.WriteLine($"found solution: {hasSolution}");
-            Console.WriteLine($"solutions number: {foundSolutionsNumber}");
-            Console.WriteLine($"time to first solution: {timeToFirst.Elapsed}");
-            Console.WriteLine($"time to complete: {timeToComplete.Elapsed}\n");
-
+            _timeToComplete.Stop();
+            if (printSolutions)
+            {
+                PrintSolutionsInfo();
+            }
+            
             
 
         }
+        private string CreateInfoString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"\nvisited nodes to first solution: {_visitedNodesToFirst}");
+            sb.AppendLine($"all visited nodes: {_visitedNodes}");
+            sb.AppendLine($"found solution: {_hasSolution}");
+            sb.AppendLine($"solutions number: {_foundSolutionsNumber}");
+            sb.AppendLine($"time to first solution: {_timeToFirst.Elapsed}");
+            sb.AppendLine($"time to complete: {_timeToComplete.Elapsed}\n");
+            return sb.ToString();
+        }
+        protected void SaveSolutionsInfoToFile(string fileName)
+        {
+            var logger = new Logger(fileName);
+            logger.WriteLine(CreateInfoString());
+           
+        }
 
+        private void PrintSolutionsInfo()
+        {
+            Console.Write(CreateInfoString());
+        }
         private S[] SaveSolution()
         {
             var saved = new S[VariablesWithConstraints.Length];

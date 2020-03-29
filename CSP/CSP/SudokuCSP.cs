@@ -1,25 +1,30 @@
 ﻿using CSP.Games;
+using CSP.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using System.Threading;
 
 namespace CSP.CSP
 {
     class SudokuCSP:CSPBase<char,Variable<char>>
     {
-        //Sudoku Sudoku {set;get;}
+        
+
+        private Sudoku _sudoku;
         private int _rows;
         private int _columns;
         private char EMPTY;
+        
 
-        public SudokuCSP(Sudoku board)
+        public SudokuCSP(Sudoku sudoku)
         {
-            _rows = board.Board.Rows;
-            _columns = board.Board.Columns;
-            //Sudoku = board;
-            EMPTY = board.Empty;
-            var vars = ParseVariables(board);
+            _rows = sudoku.Board.Rows;
+            _columns = sudoku.Board.Columns;
+            _sudoku = sudoku;
+            EMPTY = sudoku.Empty;
+            var vars = ParseVariables(sudoku);
             var doms = CreateDomains(vars);
             var cons = CreateConstraints(_rows, _columns);
 
@@ -30,12 +35,12 @@ namespace CSP.CSP
             }
 
         }
-        public new void BacktrackingAlgorithm(bool printSolutions = false)
+        public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
             base.BacktrackingAlgorithm();
             if (printSolutions)
             {
-                foreach (var v in foundSolutions)
+                foreach (var v in _foundSolutions)
                 {
                     PrintOnBoard(v);
                     Console.WriteLine();
@@ -44,8 +49,23 @@ namespace CSP.CSP
                 }
             }
             
-        }
+            
+            var fileName = $"{_sudoku.Id.ToString()}_solutions";
 
+            if (FileSaveDirectory != null)
+                fileName = $@"{FileSaveDirectory}\{fileName}";
+            base.SaveSolutionsInfoToFile(fileName);
+            foreach (var v in _foundSolutions)
+            {
+                SaveSolutionToFile(fileName, v);
+            }
+
+        }
+        private void SaveSolutionToFile(string fileName, Variable<char>[] variables)
+        {
+            var logger = new Logger(fileName);
+            logger.WriteLine(CreateBoardRepresentationString(variables));
+        }
         private void PrintOnBoard(Variable<char>[] variables)
         {
             for (int row = 0; row < _rows; row++)
@@ -57,6 +77,20 @@ namespace CSP.CSP
                 Console.WriteLine();
             }
 
+        }
+
+        private string CreateBoardRepresentationString(Variable<char>[] variables)
+        {
+            var sb = new StringBuilder();
+            for (int row = 0; row < _rows; row++)
+            {
+                for (int column = 0; column < _columns; column++)
+                {
+                    sb.Append($"{variables[row * _columns + column].Value} ");
+                }
+                sb.Append("\n");
+            }
+            return sb.ToString();
         }
         private Variable<char>[] ParseVariables(Sudoku sudoku)
         {

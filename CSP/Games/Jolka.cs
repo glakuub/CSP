@@ -7,9 +7,9 @@ namespace CSP.Games
 {
     class Jolka
     {
+        public string Name { set; get; }
         public string[] Words { set; get; }
         public Matrix<char> Board { set; get; }
-
         public char Block { set; get; }
         public char Empty { set; get; }
         public override string ToString()
