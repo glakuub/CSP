@@ -1,6 +1,7 @@
 ﻿using CSP.Util;
 using System;
 using System.Collections.Generic;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -8,10 +9,11 @@ using System.Threading;
 
 namespace CSP.CSP
 {
-    class CSPBase<T,S> where S: Variable<T>
+    abstract class CSPBase<T,S> where S: Variable<T>
     {
 
         public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
+        protected int[] _indexMap;
         public string FileSaveDirectory { set; get; }
 
         protected List<S[]> _foundSolutions;
@@ -23,6 +25,8 @@ namespace CSP.CSP
         private int _visitedNodesToFirst = 0;
         private int _foundSolutionsNumber = 0;
         private bool _hasSolution = false;
+
+       
         public virtual void BacktrackingAlgorithm(bool printSolutions = false)
         {
             _timeToFirst = new Stopwatch();
@@ -83,7 +87,7 @@ namespace CSP.CSP
                 }
 
                 
-                currentVariableDomain = VariablesWithConstraints.Where(t => t.Item1.Index == current.Index).First().Item2;
+                currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
 
                 bool constraintsSatisfied = false;
                 if (currentVariableDomain.HasNext())
@@ -151,30 +155,12 @@ namespace CSP.CSP
         private S[] SaveSolution()
         {
             var saved = new S[VariablesWithConstraints.Length];
-            for(int i = 0; i<saved.Length;i++)
+            for (int i = 0; i < saved.Length; i++)
             {
-                saved[i] = (S)Activator.CreateInstance(typeof(S),new object[] { VariablesWithConstraints[i].Item1 });
+                saved[i] = (S)Activator.CreateInstance(typeof(S), new object[] { VariablesWithConstraints[i].Item1 });
             }
 
             return saved;
-        }
-        private Variable<T> GoToLastWithNonemptyDomain(Variable<T> current)
-        {
-            var curr = current;
-            while(HasPreviousVariable(curr))
-            {
-                var prev = PreviousVariable(current);
-                var prevDomain = VariablesWithConstraints.Where(t => t.Item1.Index == prev.Index).First().Item2;
-                if(prevDomain.RemainingSize()==0)
-                {
-                    break;
-                }
-                else
-                {
-                    curr = prev;
-                }
-            }
-            return curr;
         }
 
         private Variable<T> StartVariable()
@@ -185,10 +171,10 @@ namespace CSP.CSP
         {
             bool result = true;
             int index = current.Index;
-            var constraints = VariablesWithConstraints.Where(t => t.Item1.Index == index).First().Item3;
+            var constraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
                 foreach (var pred in constraints)
                 {
-                    if (!pred.Check(VariablesWithConstraints))
+                    if (!pred.Check(VariablesWithConstraints, _indexMap))
                     {
                         result = false;
                         break;
@@ -198,23 +184,27 @@ namespace CSP.CSP
             return result;
         }
         private bool HasPreviousVariable(Variable<T> current)
-        {
-            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+        { 
+           // int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            int currentIdx = _indexMap[current.Index];
             return currentIdx - 1 >= 0;
         }
         private Variable<T> PreviousVariable(Variable<T> current)
         {
-            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            int currentIdx = _indexMap[current.Index];
             return VariablesWithConstraints[currentIdx - 1].Item1;
         }
         private bool HasNextVariable(Variable<T> current)
         {
-            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            int currentIdx = _indexMap[current.Index];
             return currentIdx + 1 <VariablesWithConstraints.Length;
         }
         private Variable<T> NextVariable(Variable<T> current)
         {
-            int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
+            int currentIdx = _indexMap[current.Index];
             return VariablesWithConstraints[currentIdx + 1].Item1;
         }
 
@@ -233,6 +223,7 @@ namespace CSP.CSP
         {
 
             Array.Sort(VariablesWithConstraints, (t1,t2) => t1.Item2.Size.CompareTo(t2.Item2.Size));
+            UpdateIndexMap();
 
         }
         protected void SortDomainwiseAndConstrainwise()
@@ -242,6 +233,15 @@ namespace CSP.CSP
                                                             t2.Item3.Count.CompareTo(t1.Item3.Count):
                                                             t1.Item2.Size.CompareTo(t2.Item2.Size));
 
+            UpdateIndexMap();
+
+        }
+        private void UpdateIndexMap()
+        {
+            for (int i = 0; i < _indexMap.Length; i++)
+            {
+                _indexMap[VariablesWithConstraints[i].Item1.Index] = i;
+            }
         }
 
     }

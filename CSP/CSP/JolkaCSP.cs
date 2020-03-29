@@ -22,6 +22,8 @@ namespace CSP.CSP
             var domains = CreateDmains(jolka, variables);
             var constraints = CreateConstraints(jolka, variables);
 
+            _indexMap = Enumerable.Range(0, variables.Length).ToArray();
+
             VariablesWithConstraints = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>[variables.Length];
             for(int i=0; i< variables.Length;i++)
             {
@@ -35,7 +37,7 @@ namespace CSP.CSP
 
         public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
-            base.BacktrackingAlgorithm();
+            base.BacktrackingAlgorithm(printSolutions);
             if (printSolutions)
             {
                 foreach (var s in _foundSolutions)

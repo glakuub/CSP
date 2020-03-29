@@ -28,6 +28,8 @@ namespace CSP.CSP
             var doms = CreateDomains(vars);
             var cons = CreateConstraints(_rows, _columns);
 
+            _indexMap = Enumerable.Range(0, vars.Length).ToArray();
+
             VariablesWithConstraints = new Tuple<Variable<char>, Domain<char>, List<Constraint<char, Variable<char>>>>[vars.Length];
             for(int i = 0; i<vars.Length;i++)
             {
@@ -37,7 +39,7 @@ namespace CSP.CSP
         }
         public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
-            base.BacktrackingAlgorithm();
+            base.BacktrackingAlgorithm(printSolutions);
             if (printSolutions)
             {
                 foreach (var v in _foundSolutions)

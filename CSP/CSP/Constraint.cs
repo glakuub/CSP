@@ -19,12 +19,10 @@ namespace CSP.CSP
             _predicate = predicate;
         }
 
-        public bool Check(Tuple<S,Domain<T>,List<Constraint<T,S>>>[] varsWithCons)
-        {
-            var v1 = varsWithCons.Where(t => t.Item1.Index == _id1).First().Item1.Value;
-            var v2 = varsWithCons.Where(t => t.Item1.Index == _id2).First().Item1.Value;
-            
-
+        public bool Check(Tuple<S,Domain<T>,List<Constraint<T,S>>>[] varsWithCons, int[] indexMap)
+        { 
+            var v1 = varsWithCons[indexMap[_id1]].Item1.Value;
+            var v2 = varsWithCons[indexMap[_id2]].Item1.Value;
             return _predicate(v1,v2);
         }
     }

@@ -22,16 +22,40 @@ namespace CSP
         static void Main(string[] args)
         {
 
+            //Ładownie danych i urchomienie algorytmu dla trzech plików sudoku:
+            //      1 rozwązanie
+            //      wiele rozwiązań
+            //      brak rozwiązań
+            //Pliki z rezultatem działania algorytmu znajdują się w katalogu \CSP\ai-lab2-2020-dane\Solutions\
 
             //var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
-            //foreach (var s in sbs.TakeLast(6).Take(1))
-            //{
-            //    var scsp = new SudokuCSP(s) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
-            //    scsp.BacktrackingAlgorithm();
-            //}
-            var jolka = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle4", $@"{JOLKA_DIRECTORY}\words4", '#', '_');
-            var jolkaCSP = new JolkaCSP(jolka) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
-            jolkaCSP.BacktrackingAlgorithm();
+
+            //var sudoku1Solution = new SudokuCSP(sbs[42]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            //sudoku1Solution.BacktrackingAlgorithm();
+
+            //var sudokuManySolutions = new SudokuCSP(sbs[42]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            //sudokuManySolutions.BacktrackingAlgorithm();
+
+            //var sudoku0Solutions = new SudokuCSP(sbs[45]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            //sudoku0Solutions.BacktrackingAlgorithm();
+
+
+            //Ładownie danych i urchomienie algorytmu dla dwóch plików Jolka:
+            //      1 rozwązanie
+            //      2 rozwiązania
+            //Pliki z rezultatem działania algorytmu znajdują się w katalogu \CSP\ai-lab2-2020-dane\Jolka\Solutions\
+
+            //var jolka1Solution = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle4", $@"{JOLKA_DIRECTORY}\words4", '#', '_');
+            //var jolkaCSP1Solution = new JolkaCSP(jolka1Solution) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
+            //jolkaCSP1Solution.BacktrackingAlgorithm();
+
+            //var jolka2Solutions = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle1", $@"{JOLKA_DIRECTORY}\words1", '#', '_');
+            //var jolkaCSP2Solutions = new JolkaCSP(jolka2Solutions) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
+            //jolkaCSP2Solutions.BacktrackingAlgorithm();
+
+            var jolka2Solutions = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle4", $@"{JOLKA_DIRECTORY}\words4", '#', '_');
+            var jolkaCSP2Solutions = new JolkaCSP(jolka2Solutions) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
+            jolkaCSP2Solutions.BacktrackingAlgorithm(true);
 
         }
 
