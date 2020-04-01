@@ -28,10 +28,13 @@ namespace CSP
             //      brak rozwiązań
             //Pliki z rezultatem działania algorytmu znajdują się w katalogu \CSP\ai-lab2-2020-dane\Solutions\
 
-            //var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
+            var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
 
-            //var sudoku1Solution = new SudokuCSP(sbs[42]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
-            //sudoku1Solution.BacktrackingAlgorithm();
+            //var sudoku1Solution = new SudokuCSP(sbs[40]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            //sudoku1Solution.BacktrackingAlgorithm(true);
+
+            var sudokufc = new SudokuCSP(sbs[10]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            sudokufc.BacktrackingAlgorithmForwardCheck(true);
 
             //var sudokuManySolutions = new SudokuCSP(sbs[42]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
             //sudokuManySolutions.BacktrackingAlgorithm();
@@ -53,9 +56,16 @@ namespace CSP
             //var jolkaCSP2Solutions = new JolkaCSP(jolka2Solutions) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
             //jolkaCSP2Solutions.BacktrackingAlgorithm();
 
-            var jolka2Solutions = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle4", $@"{JOLKA_DIRECTORY}\words4", '#', '_');
-            var jolkaCSP2Solutions = new JolkaCSP(jolka2Solutions) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY };
-            jolkaCSP2Solutions.BacktrackingAlgorithm(true);
+            //var j1 = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle0", $@"{JOLKA_DIRECTORY}\words0", '#', '_');
+            //var j1cspfc = new JolkaCSP(j1) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY, ValueSelection = ValueSelection.LEAST_CONSTRAINING };
+            //j1cspfc.BacktrackingAlgorithmForwardCheck(true);
+
+            //var j1csp = new JolkaCSP(j1) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY, ValueSelection = ValueSelection.LEAST_CONSTRAINING };
+            //j1csp.BacktrackingAlgorithm(true);
+
+            //var j2 = Loader.LoadJolka($@"{JOLKA_DIRECTORY}\puzzle2", $@"{JOLKA_DIRECTORY}\words2", '#', '_');
+            //var j2csp = new JolkaCSP(j2) { FileSaveDirectory = JOLKA_SOLUTIONS_DIRECTORY, ValueSelection = ValueSelection.DEFINITION };
+            //j2csp.BacktrackingAlgorithm(true);
 
         }
 

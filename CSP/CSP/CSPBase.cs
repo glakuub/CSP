@@ -9,13 +9,14 @@ using System.Threading;
 
 namespace CSP.CSP
 {
+    enum ValueSelection { DEFINITION, LEAST_CONSTRAINING}
     abstract class CSPBase<T,S> where S: Variable<T>
     {
 
         public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
         protected int[] _indexMap;
         public string FileSaveDirectory { set; get; }
-
+        public ValueSelection ValueSelection { set; get; }
         protected List<S[]> _foundSolutions;
         
         private Stopwatch _timeToFirst;
@@ -29,6 +30,8 @@ namespace CSP.CSP
        
         public virtual void BacktrackingAlgorithm(bool printSolutions = false)
         {
+            int alreadySet = 0;
+
             _timeToFirst = new Stopwatch();
             _timeToComplete = new Stopwatch();
             _foundSolutions = new List<S[]>();
@@ -62,7 +65,7 @@ namespace CSP.CSP
                             _foundSolutions.Add(SaveSolution());
 
                             
-                            if(currentVariableDomain!=null && !currentVariableDomain.HasNext())
+                            if(currentVariableDomain!=null && !HasNextDomainValue(current))
                                 current = PreviousVariable(current);
                         }
                     }
@@ -90,11 +93,18 @@ namespace CSP.CSP
                 currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
 
                 bool constraintsSatisfied = false;
-                if (currentVariableDomain.HasNext())
+                if (!currentVariableDomain.HasNext())
                 {
-                    while (currentVariableDomain.HasNext())
+                    currentVariableDomain.Reset();
+                    current.Value = currentVariableDomain.UnsetValue();
+                    backtrack = true;
+                   
+                }
+                else
+                {
+                    while (HasNextDomainValue(current))
                     {
-                        var currentDomainValue = currentVariableDomain.Next();
+                        var currentDomainValue = NextDomainValue(current);
                         current.Value = currentDomainValue;
                         _visitedNodes++;
                         if (CheckConstraints(current))
@@ -110,15 +120,16 @@ namespace CSP.CSP
                         backtrack = true;
                     }
                 }
-                else
-                {
-                    currentVariableDomain.Reset();
-                    current.Value = currentVariableDomain.UnsetValue();
-                    backtrack = true;
-                }
 
-                
-                _iteration++;
+                //if (_iteration % 1000000 == 0)
+                //    alreadySet = AlredySetVariables();
+
+                //if (alreadySet != AlredySetVariables())
+                //{
+                //    alreadySet = AlredySetVariables();
+                //    Console.WriteLine(alreadySet);
+                //}
+                        _iteration++;
             }
 
             _timeToComplete.Stop();
@@ -129,6 +140,236 @@ namespace CSP.CSP
             
             
 
+        }
+
+        public virtual void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
+        {
+            int alreadySet = 0;
+
+            _timeToFirst = new Stopwatch();
+            _timeToComplete = new Stopwatch();
+            _foundSolutions = new List<S[]>();
+            Variable<T> current = null;
+            bool backtrack = false;
+
+            _timeToFirst.Start();
+            _timeToComplete.Start();
+            while (true)
+            {
+                Domain<T> currentVariableDomain = null;
+                if (current != null)
+                {
+
+                    if (!backtrack)
+                    {
+                        if (HasNextVariable(current))
+                        {
+                            current = NextVariable(current);
+                        }
+                        else
+                        {
+                            _hasSolution = true;
+                            //Console.WriteLine("found");
+                            if (_foundSolutionsNumber == 0)
+                            {
+                                _visitedNodesToFirst = _visitedNodes;
+                                _timeToFirst.Stop();
+                            }
+                            _foundSolutionsNumber++;
+                            _foundSolutions.Add(SaveSolution());
+
+
+                            if (currentVariableDomain != null && !HasNextDomainValue(current))
+                                current = PreviousVariable(current);
+                        }
+                    }
+                    else
+                    {
+                        if (HasPreviousVariable(current))
+                        {
+                            current = PreviousVariable(current);
+                            backtrack = false;
+                        }
+                        else
+                        {
+                            break;
+                        }
+                    }
+
+                }
+                else
+                {
+                    current = StartVariable();
+
+                }
+
+
+                currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+
+                bool constraintsSatisfied = false;
+                if (!currentVariableDomain.HasNext())
+                {
+                    currentVariableDomain.Reset();
+                    current.Value = currentVariableDomain.UnsetValue();
+                    backtrack = true;
+
+                }
+                else
+                {
+                    while (HasNextDomainValue(current))
+                    {
+                        var currentDomainValue = NextDomainValue(current);
+                        current.Value = currentDomainValue;
+                        _visitedNodes++;
+
+                        //Filter domains without values
+
+                        if(!FilterOutDomains(current))
+                        {
+                            if(CheckConstraints(current))
+                            {
+                                constraintsSatisfied = true;
+                                break;
+                            }
+                            
+                        }
+                     
+                    }
+                    if (!constraintsSatisfied)
+                    {
+                        currentVariableDomain.Reset();
+                        current.Value = currentVariableDomain.UnsetValue();
+                        backtrack = true;
+                        for(int i = _indexMap[current.Index] + 1; i<VariablesWithConstraints.Length;i++)
+                        {
+                            VariablesWithConstraints[i].Item2.Reset();
+                        }
+                    }
+                }
+
+                //if (_iteration % 1000000 == 0)
+                //    alreadySet = AlredySetVariables();
+
+                //if (alreadySet != AlredySetVariables())
+                //{
+                //    alreadySet = AlredySetVariables();
+                //    Console.WriteLine(alreadySet);
+                //}
+                _iteration++;
+            }
+
+            _timeToComplete.Stop();
+            if (printSolutions)
+            {
+                PrintSolutionsInfo();
+            }
+
+
+
+        }
+        private bool FilterOutDomains(Variable<T> current)
+        {
+            bool reducedToZero = false;
+            var checkedVariables = new List<Variable<T>>();
+            var currentVariableConstraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
+            for (int i = 0; i < currentVariableConstraints.Count; i++)
+            {
+                var pairVariable = VariablesWithConstraints[_indexMap[currentVariableConstraints[i].Id2]].Item1;
+                
+                var constraint = currentVariableConstraints[i];
+
+                if (_indexMap[pairVariable.Index] > _indexMap[current.Index])
+                {
+                    var pairVariableDomain = VariablesWithConstraints[_indexMap[pairVariable.Index]].Item2;
+                    checkedVariables.Add(pairVariable);
+                    var domainArray = pairVariableDomain.AsArray();
+                    int domainSize = domainArray.Length;
+                    for (int j = 0; j < domainSize; j++)
+                    {
+
+                        if (!constraint.Check(current.Value, domainArray[j]))
+                        {
+                            pairVariableDomain.Used[j] = true;
+                            domainSize--;
+                        }
+
+                    }
+                    if (domainSize == 0)
+                    {
+                        //foreach(var v in checkedVariables)
+                        //{
+                        //    VariablesWithConstraints[_indexMap[v.Index]].Item2.Reset();
+                        //}
+                        reducedToZero =  true;
+                        break;
+                    }
+                }
+
+            }
+
+            return reducedToZero;
+
+        }
+        private bool HasNextDomainValue(Variable<T> current)
+        {
+            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+            return !currentVariableDomain.IsEmpty();
+        }
+        private T NextDomainValue(Variable<T> current)
+        {
+            if(ValueSelection.Equals(ValueSelection.DEFINITION))
+            {
+                return DefinitionOrderValueSelection(current);
+            }
+            else
+            {
+                return LeastConstrainingValue(current);
+            }
+        }
+
+        private T DefinitionOrderValueSelection(Variable<T> current)
+        {
+            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+            return currentVariableDomain.Next();
+
+        }
+        private T LeastConstrainingValue(Variable<T> current)
+        {
+            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+            int bestIndex = -1;
+            T best = default(T);
+            int leastConstraining = int.MaxValue;
+            for (int i = 0; i < currentVariableDomain.Size; i++)
+            {
+                if (currentVariableDomain.Used[i] == false)
+                {
+                    var currentValue = currentVariableDomain.Values[i];
+                    var currentConstraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
+                    int excludesNumber = 0;
+                    for (int j = 0; j < currentConstraints.Count; j++)
+                    {
+                        var coupledVarIdx = currentConstraints[j].Id2;
+                        var coupledVarDomain = VariablesWithConstraints[_indexMap[coupledVarIdx]].Item2.Values;
+
+                        for (int k = 0; k < coupledVarDomain.Length; k++)
+                        {
+                            if (!currentConstraints[j].Check(currentValue, coupledVarDomain[k]))
+                                excludesNumber++;
+
+                        }
+
+                    }
+                    if (excludesNumber < leastConstraining)
+                    {
+                        leastConstraining = excludesNumber;
+                        best = currentValue;
+                        bestIndex = i;
+                    }
+                }
+
+            }
+            currentVariableDomain.Used[bestIndex] = true;
+            return best;
         }
         private string CreateInfoString()
         {
@@ -218,6 +459,18 @@ namespace CSP.CSP
 
 
         //}
+        private int AlredySetVariables()
+        {
+            int set = 0;
+            for (int i = 0; i < VariablesWithConstraints.Length; i++)
+            {
+                if (VariablesWithConstraints[i].Item1.Value.Equals(VariablesWithConstraints[i].Item2.Default))
+                    set++;
+            }
+            return set;
+        }
+
+       
 
         protected void SortDomainwise()
         {

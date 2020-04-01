@@ -30,7 +30,7 @@ namespace CSP.CSP
                 VariablesWithConstraints[i] = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>(variables[i], domains[i], constraints[i]);
             }
 
-            SortDomainwise();
+            //SortDomainwise();
             //SortDomainwiseAndConstrainwise();
 
         }
@@ -54,6 +54,25 @@ namespace CSP.CSP
                 SaveBoardToFile(fileName, s);
             }
                 
+        }
+        public override void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
+        {
+            base.BacktrackingAlgorithmForwardCheck(printSolutions);
+            if (printSolutions)
+            {
+                foreach (var s in _foundSolutions)
+                {
+                    PrintOnBoard(s);
+                }
+            }
+            var fileName = $"{_jolka.Name}_solution";
+            if (FileSaveDirectory != null)
+                fileName = $@"{FileSaveDirectory}\{fileName}";
+            base.SaveSolutionsInfoToFile(fileName);
+            foreach (var s in _foundSolutions)
+            {
+                SaveBoardToFile(fileName, s);
+            }
         }
 
         private string CreateBoardString(JolkaVariable[] variables)

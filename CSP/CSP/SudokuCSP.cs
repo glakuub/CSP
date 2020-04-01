@@ -42,13 +42,13 @@ namespace CSP.CSP
             base.BacktrackingAlgorithm(printSolutions);
             if (printSolutions)
             {
-                foreach (var v in _foundSolutions)
-                {
-                    PrintOnBoard(v);
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                }
+                //foreach (var v in _foundSolutions)
+                //{
+                //    PrintOnBoard(v);
+                //    Console.WriteLine();
+                //    Console.WriteLine();
+                //    Console.WriteLine();
+                //}
             }
             
             
@@ -62,6 +62,32 @@ namespace CSP.CSP
                 SaveSolutionToFile(fileName, v);
             }
 
+        }
+
+        public override void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
+        {
+            base.BacktrackingAlgorithmForwardCheck(printSolutions);
+            if (printSolutions)
+            {
+                //foreach (var v in _foundSolutions)
+                //{
+                //    PrintOnBoard(v);
+                //    Console.WriteLine();
+                //    Console.WriteLine();
+                //    Console.WriteLine();
+                //}
+            }
+
+
+            var fileName = $"{_sudoku.Id.ToString()}_solutions";
+
+            if (FileSaveDirectory != null)
+                fileName = $@"{FileSaveDirectory}\{fileName}";
+            base.SaveSolutionsInfoToFile(fileName);
+            foreach (var v in _foundSolutions)
+            {
+                SaveSolutionToFile(fileName, v);
+            }
         }
         private void SaveSolutionToFile(string fileName, Variable<char>[] variables)
         {
