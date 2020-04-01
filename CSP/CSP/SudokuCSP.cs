@@ -42,13 +42,13 @@ namespace CSP.CSP
             base.BacktrackingAlgorithm(printSolutions);
             if (printSolutions)
             {
-                //foreach (var v in _foundSolutions)
-                //{
-                //    PrintOnBoard(v);
-                //    Console.WriteLine();
-                //    Console.WriteLine();
-                //    Console.WriteLine();
-                //}
+                foreach (var v in _foundSolutions)
+                {
+                    PrintOnBoard(v);
+                    Console.WriteLine();
+                    Console.WriteLine();
+                    Console.WriteLine();
+                }
             }
             
             
@@ -69,13 +69,13 @@ namespace CSP.CSP
             base.BacktrackingAlgorithmForwardCheck(printSolutions);
             if (printSolutions)
             {
-                //foreach (var v in _foundSolutions)
-                //{
-                //    PrintOnBoard(v);
-                //    Console.WriteLine();
-                //    Console.WriteLine();
-                //    Console.WriteLine();
-                //}
+                foreach (var v in _foundSolutions)
+                {
+                    PrintOnBoard(v);
+                    Console.WriteLine();
+                    Console.WriteLine();
+                    Console.WriteLine();
+                }
             }
 
 
@@ -198,13 +198,13 @@ namespace CSP.CSP
             List<Tuple<int, int>> neighbours = new List<Tuple<int, int>>();
             var ralativeRow = row % 3;
             var relativeColumn = column % 3;
-            for (int i = 0; i < 3; i++)
+            for (int r = 0; r < 3; r++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int c = 0; c < 3; c++)
                 {
-                    if (!(i == ralativeRow && j == relativeColumn))
+                    if (!(r == ralativeRow && c == relativeColumn) && r!= ralativeRow && c!=relativeColumn)
                     {
-                        neighbours.Add(new Tuple<int, int>(i, j));
+                        neighbours.Add(new Tuple<int, int>(r, c));
                     }
                 }
             }

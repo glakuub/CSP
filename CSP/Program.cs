@@ -33,7 +33,7 @@ namespace CSP
             //var sudoku1Solution = new SudokuCSP(sbs[40]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
             //sudoku1Solution.BacktrackingAlgorithm(true);
 
-            var sudokufc = new SudokuCSP(sbs[10]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
+            var sudokufc = new SudokuCSP(sbs[0]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };
             sudokufc.BacktrackingAlgorithmForwardCheck(true);
 
             //var sudokuManySolutions = new SudokuCSP(sbs[42]) { FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY };

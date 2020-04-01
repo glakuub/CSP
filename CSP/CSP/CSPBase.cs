@@ -10,6 +10,8 @@ using System.Threading;
 namespace CSP.CSP
 {
     enum ValueSelection { DEFINITION, LEAST_CONSTRAINING}
+
+ 
     abstract class CSPBase<T,S> where S: Variable<T>
     {
 
@@ -18,7 +20,7 @@ namespace CSP.CSP
         public string FileSaveDirectory { set; get; }
         public ValueSelection ValueSelection { set; get; }
         protected List<S[]> _foundSolutions;
-        
+                
         private Stopwatch _timeToFirst;
         private Stopwatch _timeToComplete;
         private int _iteration = 0;
@@ -154,13 +156,40 @@ namespace CSP.CSP
 
             _timeToFirst.Start();
             _timeToComplete.Start();
+
+
+            var domainsStack = new Stack<Domain<T>[]>();
+            Domain<T>[] domains = new Domain<T>[VariablesWithConstraints.Length];
+            for (int i = 0; i < domains.Length; i++)
+            {
+                domains[i] = new Domain<T>(VariablesWithConstraints[i].Item2);
+            }
+            domainsStack.Push(domains);
+            Domain<T>[] currentDomainsState = domainsStack.Peek();
             while (true)
             {
                 Domain<T> currentVariableDomain = null;
-                if (current != null)
-                {
+                //currentDomainsState = domainsStack.Peek();
+                if (current == null)
+                    current = StartVariable();
 
-                    if (!backtrack)
+                    if (backtrack)
+                    {
+
+                        if (HasPreviousVariable(current))
+                        {
+                            current = PreviousVariable(current);
+                            backtrack = false;
+                            domainsStack.Pop();
+                            currentDomainsState = domainsStack.Peek();
+                        }
+                        else
+                        {
+                            break;
+                        }
+                       
+                    }
+                    else
                     {
                         if (HasNextVariable(current))
                         {
@@ -169,7 +198,7 @@ namespace CSP.CSP
                         else
                         {
                             _hasSolution = true;
-                            //Console.WriteLine("found");
+                            Console.WriteLine("found");
                             if (_foundSolutionsNumber == 0)
                             {
                                 _visitedNodesToFirst = _visitedNodes;
@@ -177,34 +206,19 @@ namespace CSP.CSP
                             }
                             _foundSolutionsNumber++;
                             _foundSolutions.Add(SaveSolution());
-
-
-                            if (currentVariableDomain != null && !HasNextDomainValue(current))
-                                current = PreviousVariable(current);
-                        }
-                    }
-                    else
-                    {
-                        if (HasPreviousVariable(current))
+                        break; 
+                        if (currentVariableDomain != null && !HasNextDomainValue(current))
                         {
                             current = PreviousVariable(current);
-                            backtrack = false;
+                            domainsStack.Pop();
+                            currentDomainsState = domainsStack.Peek();
                         }
-                        else
-                        {
-                            break;
                         }
                     }
 
-                }
-                else
-                {
-                    current = StartVariable();
-
-                }
 
 
-                currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+                currentVariableDomain = currentDomainsState[_indexMap[current.Index]];
 
                 bool constraintsSatisfied = false;
                 if (!currentVariableDomain.HasNext())
@@ -216,34 +230,43 @@ namespace CSP.CSP
                 }
                 else
                 {
-                    while (HasNextDomainValue(current))
+
+                    Domain<T>[] temp = new Domain<T>[currentDomainsState.Length];
+                    for (int i = 0; i < temp.Length; i++)
                     {
-                        var currentDomainValue = NextDomainValue(current);
+                        temp[i] = new Domain<T>(currentDomainsState[i]);
+                    }
+                    domainsStack.Push(temp);
+
+
+                    while (currentVariableDomain.HasNext())
+                    {
+                        var currentDomainValue = currentVariableDomain.Next();
                         current.Value = currentDomainValue;
                         _visitedNodes++;
 
                         //Filter domains without values
 
-                        if(!FilterOutDomains(current))
+                      
+                        currentDomainsState = domainsStack.Peek();
+                        currentVariableDomain = currentDomainsState[_indexMap[current.Index]];
+
+                        if (!FilterOutDomains(current, ref currentDomainsState))
                         {
-                            if(CheckConstraints(current))
-                            {
-                                constraintsSatisfied = true;
-                                break;
-                            }
-                            
+
+                            constraintsSatisfied = true;
+                            break;
+                           
                         }
-                     
+                        
                     }
                     if (!constraintsSatisfied)
                     {
-                        currentVariableDomain.Reset();
+                        domainsStack.Pop();
+                        //currentVariableDomain.Reset();
                         current.Value = currentVariableDomain.UnsetValue();
                         backtrack = true;
-                        for(int i = _indexMap[current.Index] + 1; i<VariablesWithConstraints.Length;i++)
-                        {
-                            VariablesWithConstraints[i].Item2.Reset();
-                        }
+                       
                     }
                 }
 
@@ -267,10 +290,10 @@ namespace CSP.CSP
 
 
         }
-        private bool FilterOutDomains(Variable<T> current)
+        private bool FilterOutDomains(Variable<T> current, ref Domain<T>[] currentDomainsState)
         {
             bool reducedToZero = false;
-            var checkedVariables = new List<Variable<T>>();
+            
             var currentVariableConstraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
             for (int i = 0; i < currentVariableConstraints.Count; i++)
             {
@@ -280,8 +303,9 @@ namespace CSP.CSP
 
                 if (_indexMap[pairVariable.Index] > _indexMap[current.Index])
                 {
-                    var pairVariableDomain = VariablesWithConstraints[_indexMap[pairVariable.Index]].Item2;
-                    checkedVariables.Add(pairVariable);
+                    var pairVariableDomain = currentDomainsState[_indexMap[pairVariable.Index]];
+
+
                     var domainArray = pairVariableDomain.AsArray();
                     int domainSize = domainArray.Length;
                     for (int j = 0; j < domainSize; j++)
@@ -300,9 +324,13 @@ namespace CSP.CSP
                         //{
                         //    VariablesWithConstraints[_indexMap[v.Index]].Item2.Reset();
                         //}
+                       
                         reducedToZero =  true;
                         break;
                     }
+
+                   
+
                 }
 
             }

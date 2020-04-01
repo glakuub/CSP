@@ -8,16 +8,27 @@ namespace CSP.CSP
     class Domain<T>
     {
         public T[] Values { private set; get; }
-        public bool[] Used { private set; get; }
-        private int _currentIndex;
+        public bool[] Used { set; get; }
+        private int _currentIndex ;
         public T Default { set; get; } 
 
         public int Size { get { return Values.Length; } }
 
-        public Domain(T[] domain)
+        public Domain(T[] domainArray)
         {
-            Values = domain;
-            Used = new bool[domain.Length];
+            Values = domainArray;
+            Used = new bool[domainArray.Length];
+            
+        }
+        public Domain(Domain<T> domain)
+        {
+            Values = new T[domain.Values.Length];
+            Used = new bool[domain.Used.Length];
+
+            domain.Values.CopyTo(Values, 0);
+            domain.Used.CopyTo(Used, 0);
+            _currentIndex = domain._currentIndex;
+            Default = domain.Default;
         }
         public bool IsEmpty()
         {
@@ -30,7 +41,7 @@ namespace CSP.CSP
         public bool HasNext()
         {
 
-            return _currentIndex < Values.Length;
+            return !IsEmpty() && _currentIndex  < Values.Length;
         }
         public T Next()
         {
