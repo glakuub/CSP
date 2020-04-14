@@ -47,6 +47,7 @@ namespace CSP.CSP
 
             _timeToFirst.Start();
             _timeToComplete.Start();
+            List<Tuple<int, T>> nodes = new List<Tuple<int, T>>();
 
             bool[][] domainsState = new bool[VariablesWithConstraints.Length][];
             for(int i = 0; i < VariablesWithConstraints.Length; i++ )
@@ -140,10 +141,11 @@ namespace CSP.CSP
                     {
                         var currentDomainValue = ValueSelectionHeuristics.Next();
                         current.Value = currentDomainValue;
-                        
+                        _visitedNodes++;
+
                         if (CheckConstraints(current))
                         {
-                            _visitedNodes++;
+                           
                             constraintsSatisfied = true;
                             break;
                         }
@@ -184,7 +186,7 @@ namespace CSP.CSP
             {
                 PrintSolutionsInfo();
             }
-            
+
             
 
         }
