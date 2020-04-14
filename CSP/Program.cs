@@ -25,13 +25,21 @@ namespace CSP
 
             var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
 
+            var sudoku = new SudokuCSP(sbs[11], new DefinitionOrderVariableSelection<char, Variable<char>>())
+            {
+                FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
+                ValueSelectionHeuristics = new DefinitionOrderValueSelection<char>()
+
+            };
+            sudoku.BacktrackingAlgorithm(true);
+
             var sudokufc = new SudokuCSP(sbs[11], new DefinitionOrderVariableSelection<char, Variable<char>>())
             {
                 FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
                 ValueSelectionHeuristics = new DefinitionOrderValueSelection<char>()
 
             };
-            sudokufc.BacktrackingAlgorithm(true);
+            sudokufc.BacktrackingAlgorithmForwardCheck(true);
 
 
         }

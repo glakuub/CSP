@@ -2,6 +2,7 @@
 using CSP.CSP.Heuristics.VariableSelection;
 using CSP.Util;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -149,6 +150,7 @@ namespace CSP.CSP
                             constraintsSatisfied = true;
                             break;
                         }
+                        _backtracksNumber++;
                     }
                     if (!constraintsSatisfied)
                     {
@@ -204,17 +206,6 @@ namespace CSP.CSP
             _timeToComplete.Start();
 
 
-            //var domainsStack = new Stack<Domain<T>[]>();
-            
-            //Domain<T>[] domains = new Domain<T>[VariablesWithConstraints.Length];
-            //for (int i = 0; i < domains.Length; i++)
-            //{ 
-            //    domains[i] = new Domain<T>(VariablesWithConstraints[i].Item2);
-
-            //}
-            //domainsStack.Push(domains);
-            
-
             var domainsStateStack = new Stack<bool[][]>();
 
             bool[][] domainsState = new bool[VariablesWithConstraints.Length][];
@@ -224,10 +215,9 @@ namespace CSP.CSP
             }
             
             domainsStateStack.Push(domainsState);
-            
             bool[][] currentDomainsState = domainsStateStack.Peek();
-
             Domain<T> currentVariableDomain = null;
+
             while (true)
             {
              
@@ -246,7 +236,7 @@ namespace CSP.CSP
                             backtrack = false;
                             domainsStateStack.Pop();
                             currentDomainsState = domainsStateStack.Peek();
-                            _backtracksNumber++;
+                          
                         }
                         else
                         {
@@ -277,8 +267,7 @@ namespace CSP.CSP
                             domainsStateStack.Pop();
                             currentDomainsState = domainsStateStack.Peek();
                             currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
-                            //currentVariableDomain.Reset();
-                            current.Value = currentVariableDomain.UnsetValue();
+                            current.Value = currentVariableDomain.Default;
                             current = _variableSelectionHeuristics.Prev();
                             _backtracksNumber++;
                             
@@ -295,9 +284,11 @@ namespace CSP.CSP
                 bool constraintsSatisfied = false;
                 if (!ValueSelectionHeuristics.HasNext())
                 {
-                    
-                    current.Value = currentVariableDomain.UnsetValue();
+
+                    current.Value = currentVariableDomain.Default;
                     backtrack = true;
+                    
+                    _backtracksNumber++;
 
                 }
                 else
@@ -311,16 +302,22 @@ namespace CSP.CSP
 
                        
                         bool[][] temp = new bool[currentDomainsState.Length][];
-                        for (int i = 0; i < temp.Length; i++)
+                        int tempSize = temp.Length;
+                        for (int i = 0; i < tempSize; i++)
                         {
-                            temp[i] = new bool[currentDomainsState[i].Length];
-                            currentDomainsState[i].CopyTo(temp[i], 0);
-                          
+                            int newSize = currentDomainsState[i].Length;
+                            var tempArr = new bool[newSize];
+                            temp[i] = new bool[newSize];
+                            for(int j =0; j < newSize; j++)
+                            {
+                                temp[i][j] = currentDomainsState[i][j];
+                            }
+                            //currentDomainsState[i].CopyTo(temp[i], 0);                      
                         }
                         domainsStateStack.Push(temp);
 
                         currentDomainsState = domainsStateStack.Peek();
-                        currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                        //currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
 
                         if (!FilterOutDomains(current, ref currentDomainsState, _variableSelectionHeuristics))
                         {
@@ -329,18 +326,17 @@ namespace CSP.CSP
                             break;
                            
                         }
-
+                        
                         domainsStateStack.Pop();
                         currentDomainsState = domainsStateStack.Peek();
-                        currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                        _backtracksNumber++;
+                        //currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
 
                     }
                     if (!constraintsSatisfied)
                     {
-                       
-                        current.Value = currentVariableDomain.UnsetValue();
+                        current.Value = currentVariableDomain.Default;
                         backtrack = true;
-                       
                     }
                 }
 
@@ -377,8 +373,6 @@ namespace CSP.CSP
 
         }
 
-      
-
         protected virtual bool FilterOutDomains(S current, ref bool[][] currentDomainsState, IVariableSelectionHeuristics<T,S> variableSelectionHeuristics)
         {
             bool reducedToZero = false;
@@ -395,10 +389,11 @@ namespace CSP.CSP
                     var pairVariableDomain = VariablesWithConstraints[pairVariable.Index].Item2;
 
                     var domainArray = pairVariableDomain.AsArray();
+                    var domainMask = currentDomainsState[pairVariable.Index];
                     int domainSize = domainArray.Length;
                     for (int j = 0; j < domainSize; j++)
                     {
-
+                        
                         if (!constraint.Check(current.Value, domainArray[j]))
                         {
                             currentDomainsState[pairVariable.Index][j] = true;
@@ -426,7 +421,7 @@ namespace CSP.CSP
         {
             var sb = new StringBuilder();
             sb.AppendLine($"\nvisited nodes to first solution: {(_hasSolution?_visitedNodesToFirst.ToString():"")}");
-            sb.AppendLine($"Backtracks to first solution: {_backtracksNumberToFirstSolution}");
+            sb.AppendLine($"backtracks to first solution: {_backtracksNumberToFirstSolution}");
             sb.AppendLine($"all visited nodes: {_visitedNodes}");
             sb.AppendLine($"all backtracks: {_backtracksNumber}");
             sb.AppendLine($"found solution: {_hasSolution}");
