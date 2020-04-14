@@ -1,14 +1,14 @@
-﻿using CSP.Games;
+﻿using CSP.CSP.Heuristics.VariableSelection;
+using CSP.Games;
 using CSP.Util;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading;
 
 namespace CSP.CSP
 {
-    class SudokuCSP:CSPBase<char,Variable<char>>
+    class SudokuCSP:CSPBase<char, Variable<char>>
     {
         
 
@@ -18,8 +18,11 @@ namespace CSP.CSP
         private char EMPTY;
         
 
-        public SudokuCSP(Sudoku sudoku)
+        public SudokuCSP(Sudoku sudoku, IVariableSelectionHeuristics<char, Variable<char>> variableSelectionHeuristics)
         {
+
+            this._variableSelectionHeuristics = variableSelectionHeuristics;
+
             _rows = sudoku.Board.Rows;
             _columns = sudoku.Board.Columns;
             _sudoku = sudoku;
@@ -28,7 +31,9 @@ namespace CSP.CSP
             var doms = CreateDomains(vars);
             var cons = CreateConstraints(_rows, _columns);
 
-            _indexMap = Enumerable.Range(0, vars.Length).ToArray();
+            //_indexMap = Enumerable.Range(0, vars.Length).ToArray();
+
+            variableSelectionHeuristics.RegisterVariables(vars, doms);
 
             VariablesWithConstraints = new Tuple<Variable<char>, Domain<char>, List<Constraint<char, Variable<char>>>>[vars.Length];
             for(int i = 0; i<vars.Length;i++)
@@ -36,20 +41,22 @@ namespace CSP.CSP
                 VariablesWithConstraints[i] = new Tuple<Variable<char>, Domain<char>, List<Constraint<char, Variable<char>>>>(vars[i], doms[i], cons[i]);
             }
 
+            
+
         }
         public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
             base.BacktrackingAlgorithm(printSolutions);
-            if (printSolutions)
-            {
-                foreach (var v in _foundSolutions)
-                {
-                    PrintOnBoard(v);
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                }
-            }
+            //if (printSolutions)
+            //{
+            //    foreach (var v in _foundSolutions)
+            //    {
+            //        PrintOnBoard(v);
+            //        Console.WriteLine();
+            //        Console.WriteLine();
+            //        Console.WriteLine();
+            //    }
+            //}
             
             
             var fileName = $"{_sudoku.Id.ToString()}_solutions";
@@ -67,16 +74,16 @@ namespace CSP.CSP
         public override void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
         {
             base.BacktrackingAlgorithmForwardCheck(printSolutions);
-            if (printSolutions)
-            {
-                foreach (var v in _foundSolutions)
-                {
-                    PrintOnBoard(v);
-                    Console.WriteLine();
-                    Console.WriteLine();
-                    Console.WriteLine();
-                }
-            }
+            //if (printSolutions)
+            //{
+            //    //foreach (var v in _foundSolutions)
+            //    //{
+            //    //    PrintOnBoard(v);
+            //    //    Console.WriteLine();
+            //    //    Console.WriteLine();
+            //    //    Console.WriteLine();
+            //    //}
+            //}
 
 
             var fileName = $"{_sudoku.Id.ToString()}_solutions";
@@ -160,7 +167,7 @@ namespace CSP.CSP
             return domains;
         }
 
-        public List<Constraint<char,Variable<char>>>[] CreateConstraints(int rows, int columns)
+        public List<Constraint<char, Variable<char>>>[] CreateConstraints(int rows, int columns)
         {
             var constraints = new List<Constraint<char, Variable<char>>>[rows * columns];
             for(int row =0; row<rows;row++)

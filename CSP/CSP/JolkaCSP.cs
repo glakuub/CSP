@@ -1,5 +1,6 @@
 ﻿using CSP.Games;
 using CSP.Util;
+using CSP.CSP.Heuristics.VariableSelection;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,17 +14,18 @@ namespace CSP.CSP
     {
         private Jolka _jolka;
         private char EMPTY_CHAR;
-        public JolkaCSP(Jolka jolka)
+        public JolkaCSP(Jolka jolka, IVariableSelectionHeuristics<string,JolkaVariable> variableSelectionheuristics)
         {
             _jolka = jolka;
+            _variableSelectionHeuristics = variableSelectionheuristics;
             EMPTY_CHAR = jolka.Empty;
 
             var variables = ParseVariables(jolka).ToArray();
             var domains = CreateDmains(jolka, variables);
             var constraints = CreateConstraints(jolka, variables);
 
-            _indexMap = Enumerable.Range(0, variables.Length).ToArray();
-
+            //_indexMap = Enumerable.Range(0, variables.Length).ToArray();
+            _variableSelectionHeuristics.RegisterVariables(variables, domains);
             VariablesWithConstraints = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>[variables.Length];
             for(int i=0; i< variables.Length;i++)
             {
@@ -107,6 +109,14 @@ namespace CSP.CSP
             var logger = new Logger(fileName);
             logger.WriteLine(CreateBoardString(variables));
         }
+
+        //protected override bool FilterOutDomains(JolkaVariable current, ref bool[][] currentDomainsState, IVariableSelectionHeuristics<string, JolkaVariable> variableSelectionHeuristics)
+        //{
+        //    base.FilterOutDomains(current, ref currentDomainsState, variableSelectionHeuristics);
+
+        //    return true;
+        //}
+
         private Domain<string>[] CreateDmains(Jolka jolka, JolkaVariable[] variables)
         {
             var result = new Domain<string>[variables.Length];
@@ -244,11 +254,17 @@ namespace CSP.CSP
                 {
                     if(i!=j)
                     {
-                        var c = ConstraintOfIntersection(variables, i, j);
-                        if(c!=null)
+                        var cIntersection = ConstraintOfIntersection(variables, i, j);
+                        if(cIntersection!=null)
                         {
-                            constraints[i].Add(c);
+                            constraints[i].Add(cIntersection);
                         }
+                        var cOneInst = OneInstanceConstraint(variables, i, j);
+                        if(cOneInst!=null)
+                        {
+                            constraints[i].Add(cOneInst);
+                        }
+
                     }
                     
                 }
@@ -280,7 +296,13 @@ namespace CSP.CSP
 
             return constraint;
         }
+        private Constraint<string, JolkaVariable> OneInstanceConstraint(Variable<string>[] variables, int v1idx, int v2idx)
+        {
+            Constraint<string, JolkaVariable> constraint = null;
+            constraint = new Constraint<string, JolkaVariable>(v1idx, v2idx, (s1, s2) => !s1.Equals(s2));
+            return constraint;
 
+        }
         private List<Tuple<int,int>> VariableFields(JolkaVariable variable)
         {
             var fields = new List<Tuple<int, int>>();

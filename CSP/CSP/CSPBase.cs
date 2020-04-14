@@ -1,7 +1,8 @@
-﻿using CSP.Util;
+﻿using CSP.CSP.Heuristics.ValueSelection;
+using CSP.CSP.Heuristics.VariableSelection;
+using CSP.Util;
 using System;
 using System.Collections.Generic;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Linq;
 using System.Text;
@@ -16,17 +17,21 @@ namespace CSP.CSP
     {
 
         public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
-        protected int[] _indexMap;
+        public IValueSelectionHeuristics<T> ValueSelectionHeuristics { set; get; }
         public string FileSaveDirectory { set; get; }
         public ValueSelection ValueSelection { set; get; }
+
         protected List<S[]> _foundSolutions;
-                
+        protected IVariableSelectionHeuristics<T, S> _variableSelectionHeuristics;
+
         private Stopwatch _timeToFirst;
         private Stopwatch _timeToComplete;
         private int _iteration = 0;
         private int _visitedNodes = 0;
         private int _visitedNodesToFirst = 0;
         private int _foundSolutionsNumber = 0;
+        private int _backtracksNumber;
+        private int _backtracksNumberToFirstSolution;
         private bool _hasSolution = false;
 
        
@@ -37,101 +42,141 @@ namespace CSP.CSP
             _timeToFirst = new Stopwatch();
             _timeToComplete = new Stopwatch();
             _foundSolutions = new List<S[]>();
-            Variable<T> current = null;
+            S current = null;
             bool backtrack = false;
 
             _timeToFirst.Start();
             _timeToComplete.Start();
+
+            bool[][] domainsState = new bool[VariablesWithConstraints.Length][];
+            for(int i = 0; i < VariablesWithConstraints.Length; i++ )
+            {
+                domainsState[i] = new bool[VariablesWithConstraints[i].Item2.Size];
+            }
+            Domain<T> currentVariableDomain = null;
+            bool[] currentVariableDomainState = null;
+
             while (true)
             {
-                Domain<T> currentVariableDomain = null;
-                if (current != null)
+
+                if (current == null)
+                { 
+                    current = _variableSelectionHeuristics.StartVariable();     
+                }
+                else 
                 {
                     
-                    if (!backtrack)
+                    if (backtrack)
                     {
-                        if (HasNextVariable(current))
+                        if (_variableSelectionHeuristics.HasPrev())
                         {
-                            current = NextVariable(current);
-                        }
-                        else
-                        {
-                            _hasSolution = true;
-                            //Console.WriteLine("found");
-                            if (_foundSolutionsNumber == 0)
-                            {
-                                _visitedNodesToFirst = _visitedNodes;
-                                _timeToFirst.Stop();
-                            }
-                            _foundSolutionsNumber++;
-                            _foundSolutions.Add(SaveSolution());
-
-                            
-                            if(currentVariableDomain!=null && !HasNextDomainValue(current))
-                                current = PreviousVariable(current);
-                        }
-                    }
-                    else
-                    {
-                        if (HasPreviousVariable(current))
-                        {
-                            current = PreviousVariable(current);
+                            current = _variableSelectionHeuristics.Prev();
                             backtrack = false;
+                            
                         }
                         else
                         {
                             break;
                         }
                     }
+                    else
+                    {
+                        
+                        if (_variableSelectionHeuristics.HasNext())
+                        {
+                            current = _variableSelectionHeuristics.Next();
+                        }
+                        else
+                        {
+                            _hasSolution = true;
+                            //Console.WriteLine("found");
+
+                            if (_foundSolutionsNumber == 0)
+                            {
+                                _timeToFirst.Stop();
+                                _visitedNodesToFirst = _visitedNodes;
+                                _backtracksNumberToFirstSolution = _backtracksNumber;
+                            }
+
+                            _foundSolutionsNumber++;
+                            _foundSolutions.Add(SaveSolution());
+
+                            if (currentVariableDomain != null && !ValueSelectionHeuristics.HasNext())
+                            {
+                                if (currentVariableDomainState != null)
+                                    ArrayExtensions.Fill(ref currentVariableDomainState, false);
+                                current.Value = currentVariableDomain.Default;
+                                current = _variableSelectionHeuristics.Prev();
+                                _backtracksNumber++;
+
+                            }
+                            Console.WriteLine();
+                        }
+                    }
                     
                 }
-                else
-                {
-                    current = StartVariable();
-                    
-                }
+                
 
                 
-                currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
+                
+                currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                currentVariableDomainState = domainsState[current.Index];
+               
+                // Send current domain to heuristics
+                ValueSelectionHeuristics.RegisterDomain(current, currentVariableDomain, ref currentVariableDomainState);
 
                 bool constraintsSatisfied = false;
-                if (!currentVariableDomain.HasNext())
+                if (!ValueSelectionHeuristics.HasNext())
                 {
-                    currentVariableDomain.Reset();
-                    current.Value = currentVariableDomain.UnsetValue();
+                    ArrayExtensions.Fill(ref currentVariableDomainState, false);
+                    current.Value = currentVariableDomain.Default;
                     backtrack = true;
-                   
+                    _backtracksNumber++;
+
                 }
                 else
                 {
-                    while (HasNextDomainValue(current))
+                    while (ValueSelectionHeuristics.HasNext())
                     {
-                        var currentDomainValue = NextDomainValue(current);
+                        var currentDomainValue = ValueSelectionHeuristics.Next();
                         current.Value = currentDomainValue;
-                        _visitedNodes++;
+                        
                         if (CheckConstraints(current))
                         {
+                            _visitedNodes++;
                             constraintsSatisfied = true;
                             break;
                         }
                     }
                     if (!constraintsSatisfied)
                     {
-                        currentVariableDomain.Reset();
-                        current.Value = currentVariableDomain.UnsetValue();
+                        ArrayExtensions.Fill(ref currentVariableDomainState, false);
+                        current.Value = currentVariableDomain.Default;
                         backtrack = true;
+                        _backtracksNumber++;
                     }
                 }
 
-                //if (_iteration % 1000000 == 0)
-                //    alreadySet = AlredySetVariables();
+                //if (_iteration % 100000 == 0)
+                //    Console.Out.WriteAsync($"{alreadySet} ");
 
                 //if (alreadySet != AlredySetVariables())
                 //{
                 //    alreadySet = AlredySetVariables();
-                //    Console.WriteLine(alreadySet);
+
                 //}
-                        _iteration++;
+                //_iteration++;
+
+                //for (int i = 0; i < 9; i++)
+                //{
+                //    for (int j = 0; j < 9; j++)
+                //    {
+                //        Console.Write($"{VariablesWithConstraints[i * 9 + j].Item1.Value} ");
+                //    }
+                //    Console.WriteLine();
+                //}
+                //Thread.Sleep(5);
+                //Console.Clear();
             }
 
             _timeToComplete.Stop();
@@ -143,7 +188,6 @@ namespace CSP.CSP
             
 
         }
-
         public virtual void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
         {
             int alreadySet = 0;
@@ -151,134 +195,174 @@ namespace CSP.CSP
             _timeToFirst = new Stopwatch();
             _timeToComplete = new Stopwatch();
             _foundSolutions = new List<S[]>();
-            Variable<T> current = null;
+            S current = null;
             bool backtrack = false;
 
             _timeToFirst.Start();
             _timeToComplete.Start();
 
 
-            var domainsStack = new Stack<Domain<T>[]>();
-            Domain<T>[] domains = new Domain<T>[VariablesWithConstraints.Length];
-            for (int i = 0; i < domains.Length; i++)
+            //var domainsStack = new Stack<Domain<T>[]>();
+            
+            //Domain<T>[] domains = new Domain<T>[VariablesWithConstraints.Length];
+            //for (int i = 0; i < domains.Length; i++)
+            //{ 
+            //    domains[i] = new Domain<T>(VariablesWithConstraints[i].Item2);
+
+            //}
+            //domainsStack.Push(domains);
+            
+
+            var domainsStateStack = new Stack<bool[][]>();
+
+            bool[][] domainsState = new bool[VariablesWithConstraints.Length][];
+            for (int i = 0; i < VariablesWithConstraints.Length; i++)
             {
-                domains[i] = new Domain<T>(VariablesWithConstraints[i].Item2);
+                domainsState[i] = new bool[VariablesWithConstraints[i].Item2.Size];
             }
-            domainsStack.Push(domains);
-            Domain<T>[] currentDomainsState = domainsStack.Peek();
+            
+            domainsStateStack.Push(domainsState);
+            
+            bool[][] currentDomainsState = domainsStateStack.Peek();
+
+            Domain<T> currentVariableDomain = null;
             while (true)
             {
-                Domain<T> currentVariableDomain = null;
-                //currentDomainsState = domainsStack.Peek();
+             
                 if (current == null)
-                    current = StartVariable();
-
+                {
+                    current = _variableSelectionHeuristics.StartVariable();
+                }
+                else
+                {
                     if (backtrack)
                     {
 
-                        if (HasPreviousVariable(current))
+                        if (_variableSelectionHeuristics.HasPrev())
                         {
-                            current = PreviousVariable(current);
+                            current = _variableSelectionHeuristics.Prev();
                             backtrack = false;
-                            domainsStack.Pop();
-                            currentDomainsState = domainsStack.Peek();
+                            domainsStateStack.Pop();
+                            currentDomainsState = domainsStateStack.Peek();
+                            _backtracksNumber++;
                         }
                         else
                         {
                             break;
                         }
-                       
+
                     }
                     else
                     {
-                        if (HasNextVariable(current))
+                        if(_variableSelectionHeuristics.HasNext())
                         {
-                            current = NextVariable(current);
+                            current = _variableSelectionHeuristics.Next();
                         }
                         else
                         {
                             _hasSolution = true;
-                            Console.WriteLine("found");
+                            //Console.Out.WriteLineAsync("found");
                             if (_foundSolutionsNumber == 0)
                             {
                                 _visitedNodesToFirst = _visitedNodes;
                                 _timeToFirst.Stop();
+                                _backtracksNumberToFirstSolution = _backtracksNumber;
                             }
                             _foundSolutionsNumber++;
                             _foundSolutions.Add(SaveSolution());
-                        break; 
-                        if (currentVariableDomain != null && !HasNextDomainValue(current))
-                        {
-                            current = PreviousVariable(current);
-                            domainsStack.Pop();
-                            currentDomainsState = domainsStack.Peek();
-                        }
+                            
+                            domainsStateStack.Pop();
+                            domainsStateStack.Pop();
+                            currentDomainsState = domainsStateStack.Peek();
+                            currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                            //currentVariableDomain.Reset();
+                            current.Value = currentVariableDomain.UnsetValue();
+                            current = _variableSelectionHeuristics.Prev();
+                            _backtracksNumber++;
+                            
+                            
                         }
                     }
+                }
 
 
+                currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                ValueSelectionHeuristics.RegisterDomain(current, currentVariableDomain, ref currentDomainsState[current.Index]);
 
-                currentVariableDomain = currentDomainsState[_indexMap[current.Index]];
 
                 bool constraintsSatisfied = false;
-                if (!currentVariableDomain.HasNext())
+                if (!ValueSelectionHeuristics.HasNext())
                 {
-                    currentVariableDomain.Reset();
+                    
                     current.Value = currentVariableDomain.UnsetValue();
                     backtrack = true;
 
                 }
                 else
                 {
-
-                    Domain<T>[] temp = new Domain<T>[currentDomainsState.Length];
-                    for (int i = 0; i < temp.Length; i++)
+                    
+                    while (ValueSelectionHeuristics.HasNext())
                     {
-                        temp[i] = new Domain<T>(currentDomainsState[i]);
-                    }
-                    domainsStack.Push(temp);
-
-
-                    while (currentVariableDomain.HasNext())
-                    {
-                        var currentDomainValue = currentVariableDomain.Next();
+                        var currentDomainValue = ValueSelectionHeuristics.Next();
                         current.Value = currentDomainValue;
                         _visitedNodes++;
 
-                        //Filter domains without values
+                       
+                        bool[][] temp = new bool[currentDomainsState.Length][];
+                        for (int i = 0; i < temp.Length; i++)
+                        {
+                            temp[i] = new bool[currentDomainsState[i].Length];
+                            currentDomainsState[i].CopyTo(temp[i], 0);
+                          
+                        }
+                        domainsStateStack.Push(temp);
 
-                      
-                        currentDomainsState = domainsStack.Peek();
-                        currentVariableDomain = currentDomainsState[_indexMap[current.Index]];
+                        currentDomainsState = domainsStateStack.Peek();
+                        currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
 
-                        if (!FilterOutDomains(current, ref currentDomainsState))
+                        if (!FilterOutDomains(current, ref currentDomainsState, _variableSelectionHeuristics))
                         {
 
                             constraintsSatisfied = true;
                             break;
                            
                         }
-                        
+
+                        domainsStateStack.Pop();
+                        currentDomainsState = domainsStateStack.Peek();
+                        currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+
                     }
                     if (!constraintsSatisfied)
                     {
-                        domainsStack.Pop();
-                        //currentVariableDomain.Reset();
+                       
                         current.Value = currentVariableDomain.UnsetValue();
                         backtrack = true;
                        
                     }
                 }
 
-                //if (_iteration % 1000000 == 0)
-                //    alreadySet = AlredySetVariables();
+                //if (_iteration % 100000 == 0)
+                //    Console.Out.WriteAsync($"{alreadySet} ");
 
                 //if (alreadySet != AlredySetVariables())
                 //{
                 //    alreadySet = AlredySetVariables();
-                //    Console.WriteLine(alreadySet);
+
                 //}
-                _iteration++;
+                //_iteration++;
+
+                //for (int i = 0; i < 9; i++)
+                //{
+                //    for (int j = 0; j < 9; j++)
+                //    {
+                //        Console.Write($"{VariablesWithConstraints[i * 9 + j].Item1.Value} ");
+                //    }
+                //    Console.WriteLine();
+                //}
+                //Thread.Sleep(5);
+                //Console.Clear();
+
             }
 
             _timeToComplete.Stop();
@@ -290,21 +374,23 @@ namespace CSP.CSP
 
 
         }
-        private bool FilterOutDomains(Variable<T> current, ref Domain<T>[] currentDomainsState)
+
+      
+
+        protected virtual bool FilterOutDomains(S current, ref bool[][] currentDomainsState, IVariableSelectionHeuristics<T,S> variableSelectionHeuristics)
         {
             bool reducedToZero = false;
             
-            var currentVariableConstraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
+            var currentVariableConstraints = VariablesWithConstraints[current.Index].Item3;
             for (int i = 0; i < currentVariableConstraints.Count; i++)
             {
-                var pairVariable = VariablesWithConstraints[_indexMap[currentVariableConstraints[i].Id2]].Item1;
+                var pairVariable = VariablesWithConstraints[currentVariableConstraints[i].Id2].Item1;
                 
                 var constraint = currentVariableConstraints[i];
 
-                if (_indexMap[pairVariable.Index] > _indexMap[current.Index])
+                if (variableSelectionHeuristics.IsBefore(current,pairVariable))
                 {
-                    var pairVariableDomain = currentDomainsState[_indexMap[pairVariable.Index]];
-
+                    var pairVariableDomain = VariablesWithConstraints[pairVariable.Index].Item2;
 
                     var domainArray = pairVariableDomain.AsArray();
                     int domainSize = domainArray.Length;
@@ -313,18 +399,13 @@ namespace CSP.CSP
 
                         if (!constraint.Check(current.Value, domainArray[j]))
                         {
-                            pairVariableDomain.Used[j] = true;
+                            currentDomainsState[pairVariable.Index][j] = true;
                             domainSize--;
                         }
 
                     }
                     if (domainSize == 0)
-                    {
-                        //foreach(var v in checkedVariables)
-                        //{
-                        //    VariablesWithConstraints[_indexMap[v.Index]].Item2.Reset();
-                        //}
-                       
+                    { 
                         reducedToZero =  true;
                         break;
                     }
@@ -338,75 +419,17 @@ namespace CSP.CSP
             return reducedToZero;
 
         }
-        private bool HasNextDomainValue(Variable<T> current)
-        {
-            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
-            return !currentVariableDomain.IsEmpty();
-        }
-        private T NextDomainValue(Variable<T> current)
-        {
-            if(ValueSelection.Equals(ValueSelection.DEFINITION))
-            {
-                return DefinitionOrderValueSelection(current);
-            }
-            else
-            {
-                return LeastConstrainingValue(current);
-            }
-        }
-
-        private T DefinitionOrderValueSelection(Variable<T> current)
-        {
-            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
-            return currentVariableDomain.Next();
-
-        }
-        private T LeastConstrainingValue(Variable<T> current)
-        {
-            var currentVariableDomain = VariablesWithConstraints[_indexMap[current.Index]].Item2;
-            int bestIndex = -1;
-            T best = default(T);
-            int leastConstraining = int.MaxValue;
-            for (int i = 0; i < currentVariableDomain.Size; i++)
-            {
-                if (currentVariableDomain.Used[i] == false)
-                {
-                    var currentValue = currentVariableDomain.Values[i];
-                    var currentConstraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
-                    int excludesNumber = 0;
-                    for (int j = 0; j < currentConstraints.Count; j++)
-                    {
-                        var coupledVarIdx = currentConstraints[j].Id2;
-                        var coupledVarDomain = VariablesWithConstraints[_indexMap[coupledVarIdx]].Item2.Values;
-
-                        for (int k = 0; k < coupledVarDomain.Length; k++)
-                        {
-                            if (!currentConstraints[j].Check(currentValue, coupledVarDomain[k]))
-                                excludesNumber++;
-
-                        }
-
-                    }
-                    if (excludesNumber < leastConstraining)
-                    {
-                        leastConstraining = excludesNumber;
-                        best = currentValue;
-                        bestIndex = i;
-                    }
-                }
-
-            }
-            currentVariableDomain.Used[bestIndex] = true;
-            return best;
-        }
+   
         private string CreateInfoString()
         {
             var sb = new StringBuilder();
-            sb.AppendLine($"\nvisited nodes to first solution: {_visitedNodesToFirst}");
+            sb.AppendLine($"\nvisited nodes to first solution: {(_hasSolution?_visitedNodesToFirst.ToString():"")}");
+            sb.AppendLine($"Backtracks to first solution: {_backtracksNumberToFirstSolution}");
             sb.AppendLine($"all visited nodes: {_visitedNodes}");
+            sb.AppendLine($"all backtracks: {_backtracksNumber}");
             sb.AppendLine($"found solution: {_hasSolution}");
             sb.AppendLine($"solutions number: {_foundSolutionsNumber}");
-            sb.AppendLine($"time to first solution: {_timeToFirst.Elapsed}");
+            sb.AppendLine($"time to first solution: {(_hasSolution?_timeToFirst.Elapsed.ToString():" ")}");
             sb.AppendLine($"time to complete: {_timeToComplete.Elapsed}\n");
             return sb.ToString();
         }
@@ -416,7 +439,6 @@ namespace CSP.CSP
             logger.WriteLine(CreateInfoString());
            
         }
-
         private void PrintSolutionsInfo()
         {
             Console.Write(CreateInfoString());
@@ -431,19 +453,14 @@ namespace CSP.CSP
 
             return saved;
         }
-
-        private Variable<T> StartVariable()
-        {
-            return VariablesWithConstraints[0].Item1;
-        }
         private bool CheckConstraints(Variable<T> current)
         {
             bool result = true;
             int index = current.Index;
-            var constraints = VariablesWithConstraints[_indexMap[current.Index]].Item3;
+            var constraints = VariablesWithConstraints[current.Index].Item3;
                 foreach (var pred in constraints)
                 {
-                    if (!pred.Check(VariablesWithConstraints, _indexMap))
+                    if (!pred.Check(VariablesWithConstraints))
                     {
                         result = false;
                         break;
@@ -452,78 +469,15 @@ namespace CSP.CSP
             
             return result;
         }
-        private bool HasPreviousVariable(Variable<T> current)
-        { 
-           // int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
-            int currentIdx = _indexMap[current.Index];
-            return currentIdx - 1 >= 0;
-        }
-        private Variable<T> PreviousVariable(Variable<T> current)
-        {
-            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
-            int currentIdx = _indexMap[current.Index];
-            return VariablesWithConstraints[currentIdx - 1].Item1;
-        }
-        private bool HasNextVariable(Variable<T> current)
-        {
-            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
-            int currentIdx = _indexMap[current.Index];
-            return currentIdx + 1 <VariablesWithConstraints.Length;
-        }
-        private Variable<T> NextVariable(Variable<T> current)
-        {
-            //int currentIdx = Array.FindIndex(VariablesWithConstraints, t => t.Item1.Index == current.Index);
-            int currentIdx = _indexMap[current.Index];
-            return VariablesWithConstraints[currentIdx + 1].Item1;
-        }
-
-        //protected int[] SortConstraintwise()
-        //{
-        //    //var indexes = Enumerable.Range(0, Variables.Length).ToArray();     
-        //    //var counts = Constraints.Select(l => l.Count).ToArray();
-        //    //Array.Sort(counts, indexes);
-
-        //    return indexes.Reverse().ToArray();
-
-
-        //}
         private int AlredySetVariables()
         {
             int set = 0;
             for (int i = 0; i < VariablesWithConstraints.Length; i++)
             {
-                if (VariablesWithConstraints[i].Item1.Value.Equals(VariablesWithConstraints[i].Item2.Default))
+                if (!VariablesWithConstraints[i].Item1.Value.Equals(VariablesWithConstraints[i].Item2.Default))
                     set++;
             }
             return set;
         }
-
-       
-
-        protected void SortDomainwise()
-        {
-
-            Array.Sort(VariablesWithConstraints, (t1,t2) => t1.Item2.Size.CompareTo(t2.Item2.Size));
-            UpdateIndexMap();
-
-        }
-        protected void SortDomainwiseAndConstrainwise()
-        {
-
-            Array.Sort(VariablesWithConstraints, (t1, t2) => t1.Item2.Size.CompareTo(t2.Item2.Size)==0?
-                                                            t2.Item3.Count.CompareTo(t1.Item3.Count):
-                                                            t1.Item2.Size.CompareTo(t2.Item2.Size));
-
-            UpdateIndexMap();
-
-        }
-        private void UpdateIndexMap()
-        {
-            for (int i = 0; i < _indexMap.Length; i++)
-            {
-                _indexMap[VariablesWithConstraints[i].Item1.Index] = i;
-            }
-        }
-
     }
 }
