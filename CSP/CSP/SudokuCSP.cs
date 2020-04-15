@@ -57,17 +57,18 @@ namespace CSP.CSP
             //        Console.WriteLine();
             //    }
             //}
+            var varHeu = _variableSelectionHeuristics.GetType().Name;
+            var valHeu = ValueSelectionHeuristics.GetType().Name;
             
-            
-            var fileName = $"{_sudoku.Id.ToString()}_solutions";
+            var fileName = $"{_sudoku.Id.ToString()}_solutions_bt_{varHeu}_{valHeu}";
 
             if (FileSaveDirectory != null)
                 fileName = $@"{FileSaveDirectory}\{fileName}";
             base.SaveSolutionsInfoToFile(fileName);
-            foreach (var v in _foundSolutions)
-            {
-                SaveSolutionToFile(fileName, v);
-            }
+            //foreach (var v in _foundSolutions)
+            //{
+            //    SaveSolutionToFile(fileName, v);
+            //}
 
         }
 
@@ -86,15 +87,18 @@ namespace CSP.CSP
             //}
 
 
-            var fileName = $"{_sudoku.Id.ToString()}_solutions";
+            var varHeu = _variableSelectionHeuristics.GetType().Name;
+            var valHeu = ValueSelectionHeuristics.GetType().Name;
+
+            var fileName = $"{_sudoku.Id.ToString()}_solutions_bt_fc_{varHeu}_{valHeu}";
 
             if (FileSaveDirectory != null)
                 fileName = $@"{FileSaveDirectory}\{fileName}";
             base.SaveSolutionsInfoToFile(fileName);
-            foreach (var v in _foundSolutions)
-            {
-                SaveSolutionToFile(fileName, v);
-            }
+            //foreach (var v in _foundSolutions)
+            //{
+            //    SaveSolutionToFile(fileName, v);
+            //}
         }
         private void SaveSolutionToFile(string fileName, Variable<char>[] variables)
         {

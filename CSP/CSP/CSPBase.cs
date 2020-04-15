@@ -17,7 +17,7 @@ namespace CSP.CSP
     abstract class CSPBase<T,S> where S: Variable<T>
     {
 
-        public Tuple<S, Domain<T>, List<Constraint<T,S>>>[] VariablesWithConstraints;
+        public Tuple<S, Domain<T>, List<Constraint<T, S>>>[] VariablesWithConstraints { set; get; }
         public IValueSelectionHeuristics<T> ValueSelectionHeuristics { set; get; }
         public string FileSaveDirectory { set; get; }
         public ValueSelection ValueSelection { set; get; }
@@ -112,7 +112,7 @@ namespace CSP.CSP
                                 _backtracksNumber++;
 
                             }
-                            Console.WriteLine();
+                            
                         }
                     }
                     
@@ -305,14 +305,21 @@ namespace CSP.CSP
                         int tempSize = temp.Length;
                         for (int i = 0; i < tempSize; i++)
                         {
-                            int newSize = currentDomainsState[i].Length;
-                            var tempArr = new bool[newSize];
-                            temp[i] = new bool[newSize];
-                            for(int j =0; j < newSize; j++)
+                            if (_variableSelectionHeuristics.IsBefore(VariablesWithConstraints[i].Item1, current))
                             {
-                                temp[i][j] = currentDomainsState[i][j];
+                                temp[i] = currentDomainsState[i];
                             }
-                            //currentDomainsState[i].CopyTo(temp[i], 0);                      
+                            else
+                            {
+                                int newSize = currentDomainsState[i].Length;
+                                var tempArr = new bool[newSize];
+                                temp[i] = new bool[newSize];
+                                for (int j = 0; j < newSize; j++)
+                                {
+                                    temp[i][j] = currentDomainsState[i][j];
+                                }
+                            }
+                                         
                         }
                         domainsStateStack.Push(temp);
 
@@ -372,7 +379,6 @@ namespace CSP.CSP
 
 
         }
-
         protected virtual bool FilterOutDomains(S current, ref bool[][] currentDomainsState, IVariableSelectionHeuristics<T,S> variableSelectionHeuristics)
         {
             bool reducedToZero = false;
@@ -415,25 +421,46 @@ namespace CSP.CSP
 
             return reducedToZero;
 
-        }
-   
-        private string CreateInfoString()
+        }   
+        private string CreateInfoString(bool forProcessing=false)
         {
+            StackTrace stackTrace = new StackTrace();
             var sb = new StringBuilder();
-            sb.AppendLine($"\nvisited nodes to first solution: {(_hasSolution?_visitedNodesToFirst.ToString():"")}");
-            sb.AppendLine($"backtracks to first solution: {_backtracksNumberToFirstSolution}");
-            sb.AppendLine($"all visited nodes: {_visitedNodes}");
-            sb.AppendLine($"all backtracks: {_backtracksNumber}");
-            sb.AppendLine($"found solution: {_hasSolution}");
-            sb.AppendLine($"solutions number: {_foundSolutionsNumber}");
-            sb.AppendLine($"time to first solution: {(_hasSolution?_timeToFirst.Elapsed.ToString():" ")}");
-            sb.AppendLine($"time to complete: {_timeToComplete.Elapsed}\n");
-            return sb.ToString();
+            if (!forProcessing)
+            {
+                sb.AppendLine($"{stackTrace.GetFrame(1).GetMethod().Name}");
+                var varSelHeuName = _variableSelectionHeuristics.GetType().Name;
+                sb.AppendLine($"{varSelHeuName.Remove(varSelHeuName.Length - 2)}");
+                var valSelHeuName = ValueSelectionHeuristics.GetType().Name;
+                sb.AppendLine($"{valSelHeuName.Remove(valSelHeuName.Length - 2)}");
+                sb.AppendLine("-------------------------------------------------");
+                sb.AppendLine($"visited nodes to first solution: {(_hasSolution ? _visitedNodesToFirst.ToString() : "")}");
+                sb.AppendLine($"backtracks to first solution: {_backtracksNumberToFirstSolution}");
+                sb.AppendLine($"all visited nodes: {_visitedNodes}");
+                sb.AppendLine($"all backtracks: {_backtracksNumber}");
+                sb.AppendLine($"found solution: {_hasSolution}");
+                sb.AppendLine($"solutions number: {_foundSolutionsNumber}");
+                sb.AppendLine($"time to first solution: {(_hasSolution ? _timeToFirst.Elapsed.ToString() : " ")}");
+                sb.AppendLine($"time to complete: {_timeToComplete.Elapsed}\n");
+            }
+            else
+            {
+                sb.Append($"{ (_hasSolution ? _visitedNodesToFirst.ToString() : "")}");
+                sb.Append($", {_backtracksNumberToFirstSolution}");
+                sb.Append($", {_visitedNodes}");
+                sb.Append($", {_backtracksNumber}");
+                sb.Append($", {_hasSolution}");
+                sb.Append($", {_foundSolutionsNumber}");
+                sb.Append($", {(_hasSolution ? _timeToFirst.ElapsedMilliseconds.ToString() : " ")}");
+                sb.Append($", {_timeToComplete.ElapsedMilliseconds}");
+
+            }
+                return sb.ToString();
         }
         protected void SaveSolutionsInfoToFile(string fileName)
         {
             var logger = new Logger(fileName);
-            logger.WriteLine(CreateInfoString());
+            logger.WriteLine(CreateInfoString(true));
            
         }
         private void PrintSolutionsInfo()
