@@ -13,6 +13,16 @@ namespace CSP.Games
         public Matrix<int> Board { set; get; }
         public Matrix<int> Soulution { set; get; }
 
+        public Sudoku DeepCopy()
+        {
+            Sudoku result = new Sudoku();
+            result.Id = this.Id;
+            result.Difficulty = this.Difficulty;
+            result.Empty = this.Empty;
+            result.Board = this.Board.DeepCopy();
+            result.Soulution = this.Soulution.DeepCopy();
+            return result;
+        }
 
         public override string ToString()
         {

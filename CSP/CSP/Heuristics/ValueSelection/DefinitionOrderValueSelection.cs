@@ -30,11 +30,6 @@ namespace CSP.CSP.Heuristics.ValueSelection
             }
         }
 
-        //public void RegisterDomain(Domain<T> domain)
-        //{
-        //    _domain = domain;
-        //}
-
         public void RegisterDomain(Variable<T> variable, Domain<T> domain, ref bool[] mask)
         {
             _domain = domain;

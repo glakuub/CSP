@@ -24,7 +24,6 @@ namespace CSP.CSP
             var domains = CreateDmains(jolka, variables);
             var constraints = CreateConstraints(jolka, variables);
 
-            //_indexMap = Enumerable.Range(0, variables.Length).ToArray();
             _variableSelectionHeuristics.RegisterVariables(variables, domains);
             VariablesWithConstraints = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>[variables.Length];
             for(int i=0; i< variables.Length;i++)
@@ -32,8 +31,6 @@ namespace CSP.CSP
                 VariablesWithConstraints[i] = new Tuple<JolkaVariable, Domain<string>, List<Constraint<string, JolkaVariable>>>(variables[i], domains[i], constraints[i]);
             }
 
-            //SortDomainwise();
-            //SortDomainwiseAndConstrainwise();
 
         }
 
@@ -109,13 +106,6 @@ namespace CSP.CSP
             var logger = new Logger(fileName);
             logger.WriteLine(CreateBoardString(variables));
         }
-
-        //protected override bool FilterOutDomains(JolkaVariable current, ref bool[][] currentDomainsState, IVariableSelectionHeuristics<string, JolkaVariable> variableSelectionHeuristics)
-        //{
-        //    base.FilterOutDomains(current, ref currentDomainsState, variableSelectionHeuristics);
-
-        //    return true;
-        //}
 
         private Domain<string>[] CreateDmains(Jolka jolka, JolkaVariable[] variables)
         {

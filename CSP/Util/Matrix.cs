@@ -16,7 +16,13 @@ namespace CSP.Util
             this.Columns = columns;
             _matrix = new T[rows, columns];
         }
+        public Matrix<T> DeepCopy()
+        {
+            Matrix<T> result = new Matrix<T>(this.Rows, this.Columns);
+            result._matrix = _matrix.Clone() as T[,];
 
+            return result;
+        }
         public void SetAt(int row, int column, T element)
         {
             _matrix[row, column] = element;

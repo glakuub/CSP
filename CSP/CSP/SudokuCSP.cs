@@ -25,9 +25,9 @@ namespace CSP.CSP
 
             _rows = sudoku.Board.Rows;
             _columns = sudoku.Board.Columns;
-            _sudoku = sudoku;
+            _sudoku = sudoku.DeepCopy();
             EMPTY = sudoku.Empty;
-            var vars = ParseVariables(sudoku);
+            var vars = ParseVariables(_sudoku);
             var doms = CreateDomains(vars);
             var cons = CreateConstraints(_rows, _columns);
 
@@ -47,16 +47,7 @@ namespace CSP.CSP
         public override void BacktrackingAlgorithm(bool printSolutions = false)
         {
             base.BacktrackingAlgorithm(printSolutions);
-            //if (printSolutions)
-            //{
-            //    foreach (var v in _foundSolutions)
-            //    {
-            //        PrintOnBoard(v);
-            //        Console.WriteLine();
-            //        Console.WriteLine();
-            //        Console.WriteLine();
-            //    }
-            //}
+
             var varHeu = _variableSelectionHeuristics.GetType().Name;
             var valHeu = ValueSelectionHeuristics.GetType().Name;
             
@@ -65,26 +56,16 @@ namespace CSP.CSP
             if (FileSaveDirectory != null)
                 fileName = $@"{FileSaveDirectory}\{fileName}";
             base.SaveSolutionsInfoToFile(fileName);
-            //foreach (var v in _foundSolutions)
-            //{
-            //    SaveSolutionToFile(fileName, v);
-            //}
+            foreach (var sol in _foundSolutions)
+            {
+                SaveSolutionToFile(fileName, sol);
+            }
 
         }
 
         public override void BacktrackingAlgorithmForwardCheck(bool printSolutions = false)
         {
             base.BacktrackingAlgorithmForwardCheck(printSolutions);
-            //if (printSolutions)
-            //{
-            //    //foreach (var v in _foundSolutions)
-            //    //{
-            //    //    PrintOnBoard(v);
-            //    //    Console.WriteLine();
-            //    //    Console.WriteLine();
-            //    //    Console.WriteLine();
-            //    //}
-            //}
 
 
             var varHeu = _variableSelectionHeuristics.GetType().Name;
@@ -95,10 +76,11 @@ namespace CSP.CSP
             if (FileSaveDirectory != null)
                 fileName = $@"{FileSaveDirectory}\{fileName}";
             base.SaveSolutionsInfoToFile(fileName);
-            //foreach (var v in _foundSolutions)
-            //{
-            //    SaveSolutionToFile(fileName, v);
-            //}
+            foreach(var sol in _foundSolutions)
+            {
+                SaveSolutionToFile(fileName, sol);
+            }
+
         }
         private void SaveSolutionToFile(string fileName, Variable<char>[] variables)
         {

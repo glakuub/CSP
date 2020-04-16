@@ -78,6 +78,7 @@ namespace CSP.CSP
                         }
                         else
                         {
+                            _timeToComplete.Stop();
                             break;
                         }
                     }
@@ -91,7 +92,7 @@ namespace CSP.CSP
                         else
                         {
                             _hasSolution = true;
-                            //Console.WriteLine("found");
+                            
 
                             if (_foundSolutionsNumber == 0)
                             {
@@ -171,19 +172,10 @@ namespace CSP.CSP
                 //}
                 //_iteration++;
 
-                //for (int i = 0; i < 9; i++)
-                //{
-                //    for (int j = 0; j < 9; j++)
-                //    {
-                //        Console.Write($"{VariablesWithConstraints[i * 9 + j].Item1.Value} ");
-                //    }
-                //    Console.WriteLine();
-                //}
-                //Thread.Sleep(5);
-                //Console.Clear();
+                //PrintCurrentVariablesState();
             }
 
-            _timeToComplete.Stop();
+           
             if (printSolutions)
             {
                 PrintSolutionsInfo();
@@ -240,6 +232,7 @@ namespace CSP.CSP
                         }
                         else
                         {
+                            _timeToComplete.Stop();
                             break;
                         }
 
@@ -253,16 +246,16 @@ namespace CSP.CSP
                         else
                         {
                             _hasSolution = true;
-                            //Console.Out.WriteLineAsync("found");
+                            
                             if (_foundSolutionsNumber == 0)
                             {
                                 _visitedNodesToFirst = _visitedNodes;
                                 _timeToFirst.Stop();
                                 _backtracksNumberToFirstSolution = _backtracksNumber;
                             }
+
                             _foundSolutionsNumber++;
                             _foundSolutions.Add(SaveSolution());
-                            
                             domainsStateStack.Pop();
                             domainsStateStack.Pop();
                             currentDomainsState = domainsStateStack.Peek();
@@ -324,7 +317,7 @@ namespace CSP.CSP
                         domainsStateStack.Push(temp);
 
                         currentDomainsState = domainsStateStack.Peek();
-                        //currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                       
 
                         if (!FilterOutDomains(current, ref currentDomainsState, _variableSelectionHeuristics))
                         {
@@ -337,7 +330,8 @@ namespace CSP.CSP
                         domainsStateStack.Pop();
                         currentDomainsState = domainsStateStack.Peek();
                         _backtracksNumber++;
-                        //currentVariableDomain = VariablesWithConstraints[current.Index].Item2;
+                        
+                        
 
                     }
                     if (!constraintsSatisfied)
@@ -347,30 +341,9 @@ namespace CSP.CSP
                     }
                 }
 
-                //if (_iteration % 100000 == 0)
-                //    Console.Out.WriteAsync($"{alreadySet} ");
-
-                //if (alreadySet != AlredySetVariables())
-                //{
-                //    alreadySet = AlredySetVariables();
-
-                //}
-                //_iteration++;
-
-                //for (int i = 0; i < 9; i++)
-                //{
-                //    for (int j = 0; j < 9; j++)
-                //    {
-                //        Console.Write($"{VariablesWithConstraints[i * 9 + j].Item1.Value} ");
-                //    }
-                //    Console.WriteLine();
-                //}
-                //Thread.Sleep(5);
-                //Console.Clear();
-
             }
 
-            _timeToComplete.Stop();
+            
             if (printSolutions)
             {
                 PrintSolutionsInfo();
@@ -428,7 +401,7 @@ namespace CSP.CSP
             var sb = new StringBuilder();
             if (!forProcessing)
             {
-                sb.AppendLine($"{stackTrace.GetFrame(1).GetMethod().Name}");
+                sb.AppendLine($"{stackTrace.GetFrame(2).GetMethod().Name}");
                 var varSelHeuName = _variableSelectionHeuristics.GetType().Name;
                 sb.AppendLine($"{varSelHeuName.Remove(varSelHeuName.Length - 2)}");
                 var valSelHeuName = ValueSelectionHeuristics.GetType().Name;
@@ -460,7 +433,7 @@ namespace CSP.CSP
         protected void SaveSolutionsInfoToFile(string fileName)
         {
             var logger = new Logger(fileName);
-            logger.WriteLine(CreateInfoString(true));
+            logger.WriteLine(CreateInfoString());
            
         }
         private void PrintSolutionsInfo()
@@ -502,6 +475,20 @@ namespace CSP.CSP
                     set++;
             }
             return set;
+        }
+
+        private void PrintCurrentVariablesState()
+        {
+            for (int i = 0; i < 9; i++)
+            {
+                for (int j = 0; j < 9; j++)
+                {
+                    Console.Write($"{VariablesWithConstraints[i * 9 + j].Item1.Value} ");
+                }
+                Console.WriteLine();
+            }
+            Thread.Sleep(5);
+            Console.Clear();
         }
     }
 }

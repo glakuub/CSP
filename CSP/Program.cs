@@ -3,7 +3,9 @@ using CSP.CSP.Heuristics.ValueSelection;
 using CSP.CSP.Heuristics.VariableSelection;
 using CSP.Util;
 using System;
+using System.Diagnostics;
 using System.IO;
+using System.Threading;
 
 namespace CSP
 {
@@ -14,42 +16,26 @@ namespace CSP
         private static string SUDOKU_SOLUTIONS_DIRECTORY = $@"{Directory.GetParent(Environment.CurrentDirectory).Parent.Parent.Parent.FullName}\{DATA_DIRECTORY_NAME}\Solutions\";
         private static string FILE_NAME = "Sudoku.csv";
         private static string FILE_PATH = $@"{SUDOKU_DIRECTORY}\{FILE_NAME}";
-        private static int SUDOKU_NUMBER = 22;
-        private static int ITERATIONS = 10;
-       
-
+        private static int SUDOKU_NUMBER = 4;
 
         static void Main(string[] args)
         {
 
 
             var sbs = Loader.LoadSudokuBoards(FILE_PATH, '_');
-            for (int i = 0; i < ITERATIONS; i++)
-            {
-                var sudoku = new SudokuCSP(sbs[SUDOKU_NUMBER - 1], new MostConstrainedVariableSelection<char, Variable<char>>())
-                {
-                    FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
-                    ValueSelectionHeuristics = new RandomOrderValueSelection<char>()
+         
+          
+                     var sudoku = new SudokuCSP(sbs[SUDOKU_NUMBER - 1], new RandomOrderVariableSelection<char, Variable<char>>())
+                     {
 
-                };
-                sudoku.BacktrackingAlgorithmForwardCheck(true);
-            }
+                         FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
+                         ValueSelectionHeuristics = new DefinitionOrderValueSelection<char>()
 
-            //var sudoku = new SudokuCSP(sbs[SUDOKU_NUMBER - 1], new DefinitionOrderVariableSelection<char, Variable<char>>())
-            //{
-            //    FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
-            //    ValueSelectionHeuristics = new DefinitionOrderValueSelection<char>()
+                     };
+                     sudoku.BacktrackingAlgorithm(true);
+        
+          
 
-            //};
-            //sudoku.BacktrackingAlgorithm(true);
-
-            //var sudokufc = new SudokuCSP(sbs[SUDOKU_NUMBER - 1], new DefinitionOrderVariableSelection<char, Variable<char>>())
-            //{
-            //    FileSaveDirectory = SUDOKU_SOLUTIONS_DIRECTORY,
-            //    ValueSelectionHeuristics = new DefinitionOrderValueSelection<char>()
-
-            //};
-            //sudokufc.BacktrackingAlgorithmForwardCheck(true);
 
 
         }
